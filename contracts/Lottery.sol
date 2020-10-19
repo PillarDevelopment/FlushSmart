@@ -713,10 +713,11 @@ contract Lottery is Ownable {
     event UpdateToken(address previousToken,  address newToken, uint256 tokenId);
     event NewRound(uint256 limit, uint256 reward);
 
-    constructor (address _router, address _developers, address _wETH) public {
-        router = _router;
-        developers = _developers;
-        wETH = _wETH;
+    constructor (address _router, address _developers, address _wETH, PaperToken _paper) public {
+        router = _router; // 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D
+        developers = _developers; // 0x81Cfe8eFdb6c7B7218DDd5F6bda3AA4cd1554Fd2
+        wETH = _wETH; // 0xc778417e063141139fce010982780140aa0cd5ab
+        paper = _paper;
     }
 
 
