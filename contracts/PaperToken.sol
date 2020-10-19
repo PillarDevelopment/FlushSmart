@@ -1,4 +1,7 @@
+// SPDX-License-Identifier: UNLICENSED
+
 pragma solidity ^0.6.12;
+
 abstract contract Context {
     function _msgSender() internal view virtual returns (address payable) {
         return msg.sender;
@@ -536,11 +539,13 @@ contract GovernanceContract is Ownable {
     }
 }
 
- contract PaperToken is ERC20("Paper Token", "Paper"), GovernanceContract {
+contract PaperToken is ERC20("Paper Token", "Paper"), GovernanceContract {
+
+    uint256 public maxTotalSupply = 69000*1e18;
 
     function mint(address _to, uint256 _amount) public onlyGovernanceContracts virtual returns (bool) {
+        require(totalSupply.add(_to) <= maxTotalSupply, "Emission limit exceeded");
         _mint(_to, _amount);
-        _moveDelegates(address(0), _delegates[_to], _amount);
         return true;
     }
 }
