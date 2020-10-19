@@ -700,13 +700,16 @@ contract Lottery is Ownable {
 
     address public developers;
 
+    address wETH;
+
     event AddNewToken(address token, uint256 tokenId);
     event UpdateToken(address previousToken,  address newToken, uint256 tokenId);
     event NewRound(uint256 limit, uint256 reward);
 
-    constructor (address _router, address _developers) public {
+    constructor (address _router, address _developers, address _wETH) public {
             router = _router;
             developers = _developers;
+            wETH = _wETH;
     }
 
 
@@ -726,8 +729,12 @@ contract Lottery is Ownable {
 
     function makeBet(uint256 _tokenId, uint256 _tokenAmount) public {
         IERC20(availableTokens[_tokenId]).transferFrom(msg.sender, address(this), _tokenAmount); // отправил токены на контракт
-        uint256 ETHAmount = IUniswapV2Router02(_router).getAmountsOut(amount, path); // расчитали эквивалент эфира к токенам
-        IUniswapV2Router02.swapTokensForExactETH(amountOut, amountInMax,  path,  to,  deadline); // продали токены и купили эфиры
+        address[] memory _path = new address[](2);
+        path[0] = availableTokens[_tokenId];
+        path[1] = wETH;
+        uint256[] memory amountMinArray = UniswapAdapter.getAmountsOut(amountIn, _path);
+        IUniswapV2Router02.swapExactTokensForTokens(_tokenAmount, amountMinArray[1],  path,  address(this),  now + 1200); // обменяли токены на wETH
+
         paper.mint(msg.sender, paperReward); // 1 paper юзеру
         paper.mint(developers, paperReward.div(10)); // 1/10 идет  команде
         roundBalance = roundBalance.add(ETHAmount);
@@ -743,15 +750,14 @@ contract Lottery is Ownable {
         if (amountForRansom >= _router.quote()) {
             amountForRansom = _router.quote();
         }
-        IUniswapV2Router02.swapExactETHForTokens(amountForRansom); // 10% на покупку токена
-
+        uint256 tokensReturns = IUniswapV2Router02.swapTokensForExactTokens(amountForRansom); // 10% на покупку токена
+        paper.
 
         value.send(winner, roundBalance.sub(amountForRansom)); // 90% победителю
 
         roundBalance = 0;
         emit NewRound(roundLimit, paperReward);
     }
-
 
 
     function setRoundLimit(uint256 _newAmount) public onlyOwner {
