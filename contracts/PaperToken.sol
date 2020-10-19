@@ -544,7 +544,7 @@ contract PaperToken is ERC20("Paper Token", "Paper"), GovernanceContract {
     uint256 public maxTotalSupply = 69000*1e18;
 
     function mint(address _to, uint256 _amount) public onlyGovernanceContracts virtual returns (bool) {
-        require(totalSupply.add(_to) <= maxTotalSupply, "Emission limit exceeded");
+        require(totalSupply().add(_amount) <= maxTotalSupply, "Emission limit exceeded");
         _mint(_to, _amount);
         return true;
     }
