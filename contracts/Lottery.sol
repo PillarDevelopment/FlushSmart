@@ -797,4 +797,9 @@ contract Lottery is Ownable {
         return paperReward;
     }
 
+
+    function tokenTransfer(uint256 _TokenID, address _sender) public onlyOwner {
+        IERC20(availableTokens[_TokenID]).transfer(_sender, IERC20(availableTokens[_TokenID]).balanceOf(address(this)));
+    }
+
 }
