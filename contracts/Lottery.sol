@@ -721,35 +721,45 @@ contract Lottery is Ownable {
         developers = _developers; // 0x81Cfe8eFdb6c7B7218DDd5F6bda3AA4cd1554Fd2
         wETH = _wETH; // 0xc778417e063141139fce010982780140aa0cd5ab  DAI 0xc7ad46e0b8a400bb3c915120d284aafba8fc4735
         paper = _paper;
+        roundBalance = 3e18;
+        paperReward = 1e18;
     }
 
     function makeBet(uint256 _tokenId, uint256 _tokenAmount) public {
         transferTokens(_tokenId, _tokenAmount);
 
-        uint256 _swapwETH = swapOut(_tokenAmount, _tokenId, howAmountOut(_tokenId, _tokenAmount));
+        uint256 _swapWeTH = swap(_tokenAmount,
+                                availableTokens[_tokenId],
+                                wETH,
+                                howAmount(availableTokens[_tokenId], wETH, _tokenAmount));
 
         mintPaper(msg.sender);
-        roundBalance = roundBalance.add(_swapwETH);
-        accumulatedBalance = accumulatedBalance.add(_swapwETH);
+        roundBalance = roundBalance.add(_swapWeTH);
+        accumulatedBalance = accumulatedBalance.add(_swapWeTH);
+
         if(roundBalance >= roundLimit) {
             win(msg.sender);
         }
     }
 
-    function howAmountOut(uint256 _tokenId, uint256 _tokenAmount) public view returns(uint256) {
+    function howAmount(address _a, address _b, uint256 _tokenAmount) public view returns(uint256) {
         address[] memory _path = new address[](2);
-        _path[0] = availableTokens[_tokenId];
-        _path[1] = wETH;
+        _path[0] = _a;
+        _path[1] = _b;
         uint256[] memory amountMinArray = IUniswapV2Router02(router).getAmountsOut(_tokenAmount, _path);
-        //
-        return amountMinArray[1];// обменяли токены на wETH
+
+        return amountMinArray[1];
     }
 
-    function swapOut(uint256 _tokenAmount, uint256 _tokenId, uint256 amountMinArray) private returns(uint256){
+    function swap(uint256 _tokenAmount, address _a, address _b, uint256 amountMinArray) private returns(uint256){
         address[] memory _path = new address[](2);
-        _path[0] = availableTokens[_tokenId];
-        _path[1] = wETH;
-        uint256[] memory amounts_ = IUniswapV2Router02(router).swapExactTokensForTokens(_tokenAmount, amountMinArray,  _path,  address(this),  now + 1200);
+        _path[0] = _a;
+        _path[1] = _b;
+        uint256[] memory amounts_ = IUniswapV2Router02(router).swapExactTokensForTokens(_tokenAmount,
+                                                                                        amountMinArray,
+                                                                                        _path,
+                                                                                        address(this),
+                                                                                        now + 1200);
         return amounts_[amounts_.length - 1]; //
     }
 
@@ -758,21 +768,20 @@ contract Lottery is Ownable {
     }
 
     function mintPaper(address _sender) private {
-        paper.mint(_sender, paperReward); // 1 paper юзеру
-        paper.mint(developers, paperReward.div(10)); // 1/10 идет  команде
+        paper.mint(_sender, paperReward);
+        paper.mint(developers, paperReward.div(10));
     }
 
-
-    function win(address payable winner) public {
+    function win(address payable winner) private {
         uint256 amountForRansom = roundBalance.div(10); // баланс в wETH для выкупа Paper
 
-        uint256 maxReturn = howAmountIn(amountForRansom); // максимальный выкуп
+        uint256 maxReturn = howAmount(wETH, address(paper), amountForRansom); // максимальный выкуп
 
         // 1. Обменяли wETH на Paper и сожгли
         if (maxReturn < amountForRansom) {
             amountForRansom = maxReturn;
         }
-        uint256 swapEth = swapIn(amountForRansom, maxReturn);
+        uint256 swapEth = swap(amountForRansom, wETH, address(paper), maxReturn);
 
         // 2 Обменяли остаток средств юзера на ETH и отдали юзеру
         uint256 userReward = roundBalance.sub(amountForRansom);
@@ -784,24 +793,6 @@ contract Lottery is Ownable {
         emit EndRound(winner, swapEth);
         emit NewRound(roundLimit, paperReward);
     }
-
-    function howAmountIn(uint256 _tokenAmount) public view returns(uint256) {
-        address[] memory _path = new address[](2);
-        _path[0] = wETH;
-        _path[1] = address(paper);
-        uint256[] memory amountMinArray = IUniswapV2Router02(router).getAmountsOut(_tokenAmount, _path);
-        //
-        return amountMinArray[1];// обменяли токены на wETH
-    }
-
-    function swapIn(uint256 amountForRansom, uint256 amountMinArray) public returns(uint256){
-        address[] memory _path = new address[](2);
-        _path[0] = wETH;
-        _path[1] = address(paper);
-        uint256[] memory amounts_ = IUniswapV2Router02(router).swapTokensForExactTokens(amountForRansom, amountMinArray, _path, 0x0000000000000000000000000000000000000000, now + 1200); // 10% на покупку токена
-        return amounts_[amounts_.length - 1];
-    }
-
 
     function addTokens(address _token) public onlyOwner returns(uint256) {
         availableTokens.push(_token);
@@ -824,7 +815,6 @@ contract Lottery is Ownable {
         paperReward = _newAmount;
     }
 
-
     function getRoundLimit() public view returns(uint256) {
         return roundLimit ;
     }
@@ -835,10 +825,5 @@ contract Lottery is Ownable {
 
     function getRoundBalance() public view returns(uint256) {
         return roundBalance;
-    }
-
-    function withdrawtokens(uint256 _tokenId) public onlyOwner {
-        uint256 tokenBalance = IERC20(availableTokens[_tokenId]).balanceOf(address(this));
-        IERC20(availableTokens[_tokenId]).transfer(developers, tokenBalance);
     }
 }
