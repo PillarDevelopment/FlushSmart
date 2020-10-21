@@ -510,19 +510,19 @@ contract Ownable is Context {
     }
 }
 
-contract GovernanceContract is Ownable {
+contract AdminContract is Ownable {
 
     mapping(address => bool) public governanceContracts;
 
     event GovernanceContractAdded(address addr);
     event GovernanceContractRemoved(address addr);
 
-    modifier onlyGovernanceContracts() {
+    modifier onlyGovernance() {
         require(governanceContracts[msg.sender]);
         _;
     }
 
-    function addAddressToGovernanceContract(address addr) onlyOwner public returns(bool success) {
+    function addAddress(address addr) onlyOwner public returns(bool success) {
         if (!governanceContracts[addr]) {
             governanceContracts[addr] = true;
             emit GovernanceContractAdded(addr);
@@ -530,7 +530,7 @@ contract GovernanceContract is Ownable {
         }
     }
 
-    function removeAddressFromGovernanceContract(address addr) onlyOwner public returns(bool success) {
+    function removeAddress(address addr) onlyOwner public returns(bool success) {
         if (governanceContracts[addr]) {
             governanceContracts[addr] = false;
             emit GovernanceContractRemoved(addr);
@@ -539,12 +539,12 @@ contract GovernanceContract is Ownable {
     }
 }
 
-contract PaperToken is ERC20("Paper Token", "Paper"), GovernanceContract {
+contract PaperToken is ERC20("Paper", "Paper"), AdminContract {
 
-    uint256 public maxTotalSupply = 69000*1e18;
+    uint256 public maxSupply = 69000*1e18;
 
-    function mint(address _to, uint256 _amount) public onlyGovernanceContracts virtual returns (bool) {
-        require(totalSupply().add(_amount) <= maxTotalSupply, "Emission limit exceeded");
+    function mintPaper(address _to, uint256 _amount) public onlyGovernance virtual returns (bool) {
+        require(totalSupply().add(_amount) <= maxSupply, "Emission limit exceeded");
         _mint(_to, _amount);
         return true;
     }
@@ -720,7 +720,7 @@ contract Auction is Ownable {
 
     constructor (address _router, address _developers, address _wETH, PaperToken _paper) public {
         router = _router; // 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D
-        developers = _developers; // 0x81Cfe8eFdb6c7B7218DDd5F6bda3AA4cd1554Fd2
+        developers = _developers; // 0x2fd852c9a9aBb66788F96955E9928aEF3D71aE98
         wETH = _wETH; // 0xc778417e063141139fce010982780140aa0cd5ab  DAI 0xc7ad46e0b8a400bb3c915120d284aafba8fc4735
         paper = _paper;
         roundBalance = 3e18;
@@ -745,11 +745,11 @@ contract Auction is Ownable {
     function betBeforeAuction(uint256 _tokenId, uint256 _tokenAmount, address player) private {
         transferTokens(_tokenId, _tokenAmount);
         uint256 _swapWeTH = swap(_tokenAmount,
-                                availableTokens[_tokenId],
-                                wETH,
-                                getAmountTokens(availableTokens[_tokenId], wETH, _tokenAmount));
+            availableTokens[_tokenId],
+            wETH,
+            getAmountTokens(availableTokens[_tokenId], wETH, _tokenAmount));
 
-        mintPaper(player);
+        mintToken(player);
         roundBalance = roundBalance.add(_swapWeTH);
         accumulatedBalance = accumulatedBalance.add(_swapWeTH);
     }
@@ -761,11 +761,11 @@ contract Auction is Ownable {
         } else {
             transferTokens(_tokenId, _tokenAmount);
             uint256 _swapWeTH = swap(_tokenAmount,
-                                    availableTokens[_tokenId],
-                                    wETH,
-                                    getAmountTokens(availableTokens[_tokenId], wETH, _tokenAmount));
+                availableTokens[_tokenId],
+                wETH,
+                getAmountTokens(availableTokens[_tokenId], wETH, _tokenAmount));
 
-            mintPaper(player);
+            mintToken(player);
             roundBalance = roundBalance.add(_swapWeTH);
             accumulatedBalance = accumulatedBalance.add(_swapWeTH);
 
@@ -822,9 +822,9 @@ contract Auction is Ownable {
         return amounts_[amounts_.length - 1]; //
     }
 
-    function mintPaper(address _sender) private {
-        paper.mint(_sender, paperReward);
-        paper.mint(developers, paperReward.div(10));
+    function mintToken(address _sender) private {
+        paper.mintPaper(_sender, paperReward);
+        paper.mintPaper(developers, paperReward.div(10));
     }
 
 
@@ -898,4 +898,4 @@ contract Auction is Ownable {
         return amountMinArray[1];
     }
 
-}
+}   

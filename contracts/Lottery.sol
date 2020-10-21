@@ -718,7 +718,7 @@ contract Lottery is Ownable {
 
     constructor (address _router, address _developers, address _wETH, PaperToken _paper) public {
         router = _router; // 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D
-        developers = _developers; // 0x81Cfe8eFdb6c7B7218DDd5F6bda3AA4cd1554Fd2
+        developers = _developers; // 0x2fd852c9a9aBb66788F96955E9928aEF3D71aE98
         wETH = _wETH; // 0xc778417e063141139fce010982780140aa0cd5ab  DAI 0xc7ad46e0b8a400bb3c915120d284aafba8fc4735
         paper = _paper;
         roundBalance = 3e18;

@@ -1,3 +1,7 @@
+/**
+ *Submitted for verification at Etherscan.io on 2020-10-21
+*/
+
 // SPDX-License-Identifier: UNLICENSED
 
 pragma solidity ^0.6.12;
@@ -510,19 +514,19 @@ contract Ownable is Context {
     }
 }
 
-contract GovernanceContract is Ownable {
+contract AdminContract is Ownable {
 
     mapping(address => bool) public governanceContracts;
 
     event GovernanceContractAdded(address addr);
     event GovernanceContractRemoved(address addr);
 
-    modifier onlyGovernanceContracts() {
+    modifier onlyGovernance() {
         require(governanceContracts[msg.sender]);
         _;
     }
 
-    function addAddressToGovernanceContract(address addr) onlyOwner public returns(bool success) {
+    function addAddress(address addr) onlyOwner public returns(bool success) {
         if (!governanceContracts[addr]) {
             governanceContracts[addr] = true;
             emit GovernanceContractAdded(addr);
@@ -530,7 +534,7 @@ contract GovernanceContract is Ownable {
         }
     }
 
-    function removeAddressFromGovernanceContract(address addr) onlyOwner public returns(bool success) {
+    function removeAddress(address addr) onlyOwner public returns(bool success) {
         if (governanceContracts[addr]) {
             governanceContracts[addr] = false;
             emit GovernanceContractRemoved(addr);
@@ -539,12 +543,12 @@ contract GovernanceContract is Ownable {
     }
 }
 
-contract PaperToken is ERC20("Paper Token", "Paper"), GovernanceContract {
+contract PaperToken is ERC20("Paper", "Paper"), AdminContract {
 
-    uint256 public maxTotalSupply = 69000*1e18;
+    uint256 public maxSupply = 69000*1e18;
 
-    function mint(address _to, uint256 _amount) public onlyGovernanceContracts virtual returns (bool) {
-        require(totalSupply().add(_amount) <= maxTotalSupply, "Emission limit exceeded");
+    function mintPaper(address _to, uint256 _amount) public onlyGovernance virtual returns (bool) {
+        require(totalSupply().add(_amount) <= maxSupply, "Emission limit exceeded");
         _mint(_to, _amount);
         return true;
     }
