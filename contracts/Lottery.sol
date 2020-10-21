@@ -1,3 +1,7 @@
+/**
+ *Submitted for verification at Etherscan.io on 2020-10-21
+*/
+
 // SPDX-License-Identifier: UNLICENSED
 
 pragma solidity ^0.6.12;
@@ -510,19 +514,19 @@ contract Ownable is Context {
     }
 }
 
-contract GovernanceContract is Ownable {
+contract AdminContract is Ownable {
 
     mapping(address => bool) public governanceContracts;
 
     event GovernanceContractAdded(address addr);
     event GovernanceContractRemoved(address addr);
 
-    modifier onlyGovernanceContracts() {
+    modifier onlyGovernance() {
         require(governanceContracts[msg.sender]);
         _;
     }
 
-    function addAddressToGovernanceContract(address addr) onlyOwner public returns(bool success) {
+    function addAddress(address addr) onlyOwner public returns(bool success) {
         if (!governanceContracts[addr]) {
             governanceContracts[addr] = true;
             emit GovernanceContractAdded(addr);
@@ -530,7 +534,7 @@ contract GovernanceContract is Ownable {
         }
     }
 
-    function removeAddressFromGovernanceContract(address addr) onlyOwner public returns(bool success) {
+    function removeAddress(address addr) onlyOwner public returns(bool success) {
         if (governanceContracts[addr]) {
             governanceContracts[addr] = false;
             emit GovernanceContractRemoved(addr);
@@ -539,12 +543,12 @@ contract GovernanceContract is Ownable {
     }
 }
 
-contract PaperToken is ERC20("Paper Token", "Paper"), GovernanceContract {
+contract PaperToken is ERC20("Paper", "Paper"), AdminContract {
 
-    uint256 public maxTotalSupply = 69000*1e18;
+    uint256 public maxSupply = 69000*1e18;
 
-    function mint(address _to, uint256 _amount) public onlyGovernanceContracts virtual returns (bool) {
-        require(totalSupply().add(_amount) <= maxTotalSupply, "Emission limit exceeded");
+    function mintPaper(address _to, uint256 _amount) public onlyGovernance virtual returns (bool) {
+        require(totalSupply().add(_amount) <= maxSupply, "Emission limit exceeded");
         _mint(_to, _amount);
         return true;
     }
@@ -720,7 +724,7 @@ contract Lottery is Ownable {
         router = _router; // 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D
         developers = _developers; // 0x2fd852c9a9aBb66788F96955E9928aEF3D71aE98
         wETH = _wETH; // 0xc778417e063141139fce010982780140aa0cd5ab  DAI 0xc7ad46e0b8a400bb3c915120d284aafba8fc4735
-        paper = _paper;
+        paper = _paper; // 0x2cbef5b1356456a2830dfef6393daca2b3dfb7a5
         roundBalance = 3e18;
         paperReward = 1e18;
     }
@@ -729,11 +733,11 @@ contract Lottery is Ownable {
         transferTokens(_tokenId, _tokenAmount);
 
         uint256 _swapWeTH = swap(_tokenAmount,
-                                availableTokens[_tokenId],
-                                wETH,
-                                howAmount(availableTokens[_tokenId], wETH, _tokenAmount));
+            availableTokens[_tokenId],
+            wETH,
+            howAmount(availableTokens[_tokenId], wETH, _tokenAmount));
 
-        mintPaper(msg.sender);
+        mintToken(msg.sender);
         roundBalance = roundBalance.add(_swapWeTH);
         accumulatedBalance = accumulatedBalance.add(_swapWeTH);
 
@@ -767,9 +771,9 @@ contract Lottery is Ownable {
         IERC20(availableTokens[_tokenId]).transferFrom(msg.sender, address(this), _tokenAmount);
     }
 
-    function mintPaper(address _sender) private {
-        paper.mint(_sender, paperReward);
-        paper.mint(developers, paperReward.div(10));
+    function mintToken(address _sender) private {
+        paper.mintPaper(_sender, paperReward);
+        paper.mintPaper(developers, paperReward.div(10));
     }
 
     function win(address payable winner) private {
