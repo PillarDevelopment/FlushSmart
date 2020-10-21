@@ -1,7 +1,3 @@
-/**
- *Submitted for verification at Etherscan.io on 2020-10-21
-*/
-
 // SPDX-License-Identifier: UNLICENSED
 
 pragma solidity ^0.6.12;
@@ -690,9 +686,9 @@ interface IUniswapV2Router02 is IUniswapV2Router01 {
 }
 
 interface IWETH {
-
-    function deposit() external;
-    function withdraw(uint wad) external;
+    function deposit() external payable;
+    function transfer(address to, uint value) external returns (bool);
+    function withdraw(uint) external;
 }
 
 contract Auction is Ownable {
@@ -700,7 +696,7 @@ contract Auction is Ownable {
 
     PaperToken public paper;
 
-    address public wETH;
+    address public immutable WETH;
     address public developers;
     address[] public availableTokens;
     uint256 public accumulatedBalance;
@@ -721,11 +717,10 @@ contract Auction is Ownable {
     event NewRound(uint256 limit, uint256 reward);
     event EndRound(address winner, uint256 prize);
 
-
-    constructor (address _router, address _developers, address _wETH, PaperToken _paper) public {
+    constructor (address _router, address _developers, address _WETH, PaperToken _paper) public {
         router = _router; // 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D
         developers = _developers; // 0x2fd852c9a9aBb66788F96955E9928aEF3D71aE98
-        wETH = _wETH; // 0xc778417e063141139fce010982780140aa0cd5ab  DAI 0xc7ad46e0b8a400bb3c915120d284aafba8fc4735
+        WETH = _WETH; // 0xc778417e063141139fce010982780140aa0cd5ab  DAI 0xc7ad46e0b8a400bb3c915120d284aafba8fc4735
         paper = _paper; // 0x2cbef5b1356456a2830dfef6393daca2b3dfb7a5
         roundBalance = 3e18;
         paperReward = 1e18;
@@ -735,6 +730,9 @@ contract Auction is Ownable {
         basicAuctionDuration = 69;
     }
 
+    receive() external payable {
+        assert(msg.sender == WETH); // only accept ETH via fallback from the WETH contract
+    }
 
     //*********************  AUCTION **********************//
     function makeBet(uint256 _tokenId, uint256 _tokenAmount) public {
@@ -749,9 +747,9 @@ contract Auction is Ownable {
     function betBeforeAuction(uint256 _tokenId, uint256 _tokenAmount, address player) private {
         transferTokens(_tokenId, _tokenAmount);
         uint256 _swapWeTH = swap(_tokenAmount,
-            availableTokens[_tokenId],
-            wETH,
-            getAmountTokens(availableTokens[_tokenId], wETH, _tokenAmount));
+                                availableTokens[_tokenId],
+                                WETH,
+                                getAmountTokens(availableTokens[_tokenId], WETH, _tokenAmount));
 
         mintToken(player);
         roundBalance = roundBalance.add(_swapWeTH);
@@ -765,9 +763,9 @@ contract Auction is Ownable {
         } else {
             transferTokens(_tokenId, _tokenAmount);
             uint256 _swapWeTH = swap(_tokenAmount,
-                availableTokens[_tokenId],
-                wETH,
-                getAmountTokens(availableTokens[_tokenId], wETH, _tokenAmount));
+                                    availableTokens[_tokenId],
+                                    WETH,
+                                    getAmountTokens(availableTokens[_tokenId], WETH, _tokenAmount));
 
             mintToken(player);
             roundBalance = roundBalance.add(_swapWeTH);
@@ -784,18 +782,18 @@ contract Auction is Ownable {
 
         uint256 amountForRansom = roundBalance.div(10); // баланс в wETH для выкупа Paper
 
-        uint256 maxReturn = getAmountTokens(wETH, address(paper), amountForRansom); // максимальный выкуп
+        uint256 maxReturn = getAmountTokens(WETH, address(paper), amountForRansom); // максимальный выкуп
 
         // 1. Обменяли wETH на Paper и сожгли
         if (maxReturn < amountForRansom) {
             amountForRansom = maxReturn;
         }
-        uint256 swapEth = swap(amountForRansom, wETH, address(paper), maxReturn);
+        uint256 swapEth = swap(amountForRansom, WETH, address(paper), maxReturn);
 
         // 2 Обменяли остаток средств юзера на ETH и отдали юзеру
         uint256 userReward = roundBalance.sub(amountForRansom);
 
-        IWETH(wETH).withdraw(userReward);
+        IWETH(WETH).withdraw(userReward);
         //winner.transfer(userReward);
 
         roundBalance = 0;
@@ -819,10 +817,10 @@ contract Auction is Ownable {
         _path[0] = _a;
         _path[1] = _b;
         uint256[] memory amounts_ = IUniswapV2Router02(router).swapExactTokensForTokens(_tokenAmount,
-            amountMinArray,
-            _path,
-            address(this),
-            now + 1200);
+                                                                                        amountMinArray,
+                                                                                        _path,
+                                                                                        address(this),
+                                                                                        now + 1200);
         return amounts_[amounts_.length - 1]; //
     }
 
@@ -902,4 +900,4 @@ contract Auction is Ownable {
         return amountMinArray[1];
     }
 
-}   
+}
