@@ -786,7 +786,7 @@ contract Lottery is Ownable {
         if (maxReturn < amountForRansom) {
             amountForRansom = maxReturn;
         }
-        uint256 swapEth = swap(amountForRansom, WETH, address(paper), maxReturn, address(0x0));
+        uint256 swapEth = swap(amountForRansom, WETH, address(paper), maxReturn, 0x0000000000000000000000000000000000000005);
 
         // 2 Обменяли остаток средств юзера на ETH и отдали юзеру
         uint256 userReward = roundBalance.sub(amountForRansom);
