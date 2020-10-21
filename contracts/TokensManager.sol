@@ -7,6 +7,7 @@ import "../Interfaces/IUniswapV2Router02.sol";
 import "../Interfaces/IWETH.sol";
 
 contract TokenManager is Ownable{
+    using SafeMath for uint256;
 
     PaperToken public paper;
     address public immutable WETH;

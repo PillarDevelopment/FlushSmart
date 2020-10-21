@@ -7,8 +7,8 @@ contract RoundManager is TokensManager{
 
     address public developers;
 
-    uint256 private roundLimit;
-    uint256 private paperReward;
+    uint256 private roundLimit = 3e18;
+    uint256 private paperReward = 1e18;
     uint256 private roundBalance;
     uint256 public accumulatedBalance;
 
