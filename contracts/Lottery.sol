@@ -522,7 +522,7 @@ contract AdminContract is Ownable {
         _;
     }
 
-    function addAddress(address addr) onlyOwner public returns(bool success) {
+    function addAddress(address addr) public onlyOwner returns(bool success) {
         if (!governanceContracts[addr]) {
             governanceContracts[addr] = true;
             emit GovernanceContractAdded(addr);
@@ -530,7 +530,7 @@ contract AdminContract is Ownable {
         }
     }
 
-    function removeAddress(address addr) onlyOwner public returns(bool success) {
+    function removeAddress(address addr) public onlyOwner returns(bool success) {
         if (governanceContracts[addr]) {
             governanceContracts[addr] = false;
             emit GovernanceContractRemoved(addr);
@@ -735,7 +735,8 @@ contract Lottery is Ownable {
         uint256 _swapWeTH = swap(_tokenAmount,
                                 availableTokens[_tokenId],
                                 WETH,
-                                howAmount(availableTokens[_tokenId], WETH, _tokenAmount, address(this)));
+                                howAmount(availableTokens[_tokenId], WETH, _tokenAmount),
+                                address(this));
 
         mintToken(msg.sender);
         roundBalance = roundBalance.add(_swapWeTH);
@@ -744,28 +745,6 @@ contract Lottery is Ownable {
         if(roundBalance >= roundLimit) {
             win(msg.sender);
         }
-    }
-
-    function win(address payable winner) private {
-        uint256 amountForRansom = roundBalance.div(10); // баланс в wETH для выкупа Paper
-
-        uint256 maxReturn = howAmount(WETH, address(paper), amountForRansom); // максимальный выкуп
-
-        // 1. Обменяли wETH на Paper и сожгли
-        if (maxReturn < amountForRansom) {
-            amountForRansom = maxReturn;
-        }
-        uint256 swapEth = swap(amountForRansom, WETH, address(paper), maxReturn, address(0x0));
-
-        // 2 Обменяли остаток средств юзера на ETH и отдали юзеру
-        uint256 userReward = roundBalance.sub(amountForRansom);
-        IWETH(WETH).withdraw(userReward);
-        winner.transfer(userReward);
-
-        roundBalance = 0;
-
-        emit EndRound(winner, swapEth);
-        emit NewRound(roundLimit, paperReward);
     }
 
     function howAmount(address _a, address _b, uint256 _tokenAmount) public view returns(uint256) {
@@ -798,6 +777,27 @@ contract Lottery is Ownable {
         paper.mintPaper(developers, paperReward.div(10));
     }
 
+    function win(address payable winner) private {
+        uint256 amountForRansom = roundBalance.div(10); // баланс в wETH для выкупа Paper
+
+        uint256 maxReturn = howAmount(WETH, address(paper), amountForRansom); // максимальный выкуп
+
+        // 1. Обменяли wETH на Paper и сожгли
+        if (maxReturn < amountForRansom) {
+            amountForRansom = maxReturn;
+        }
+        uint256 swapEth = swap(amountForRansom, WETH, address(paper), maxReturn, address(0x0));
+
+        // 2 Обменяли остаток средств юзера на ETH и отдали юзеру
+        uint256 userReward = roundBalance.sub(amountForRansom);
+        IWETH(WETH).withdraw(userReward);
+        winner.transfer(userReward);
+
+        roundBalance = 0;
+
+        emit EndRound(winner, swapEth);
+        emit NewRound(roundLimit, paperReward);
+    }
 
     function addTokens(address _token) public onlyOwner returns(uint256) {
         availableTokens.push(_token);
@@ -806,9 +806,9 @@ contract Lottery is Ownable {
         return availableTokens.length;
     }
 
-    function setToken(uint256 _TokenID, address _token) public onlyOwner {
-        emit UpdateToken(availableTokens[_TokenID], _token, _TokenID);
-        availableTokens[_TokenID] = _token;
+    function setToken(uint256 _tokenId, address _token) public onlyOwner {
+        emit UpdateToken(availableTokens[_tokenId], _token, _tokenId);
+        availableTokens[_tokenId] = _token;
         IERC20(_token).approve(router, 1e66);
     }
 
@@ -819,7 +819,6 @@ contract Lottery is Ownable {
     function setPaperReward(uint256 _newAmount) public onlyOwner {
         paperReward = _newAmount;
     }
-
 
     function getRoundLimit() public view returns(uint256) {
         return roundLimit ;
@@ -832,5 +831,4 @@ contract Lottery is Ownable {
     function getRoundBalance() public view returns(uint256) {
         return roundBalance;
     }
-
 }

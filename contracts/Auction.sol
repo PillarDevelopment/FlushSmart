@@ -850,9 +850,9 @@ contract Auction is Ownable {
         return availableTokens.length;
     }
 
-    function setToken(uint256 _TokenID, address _token) public onlyOwner {
-        emit UpdateToken(availableTokens[_TokenID], _token, _TokenID);
-        availableTokens[_TokenID] = _token;
+    function setToken(uint256 _tokenId, address _token) public onlyOwner {
+        emit UpdateToken(availableTokens[_tokenId], _token, _tokenId);
+        availableTokens[_tokenId] = _token;
         IERC20(_token).approve(router, 1e66);
     }
 

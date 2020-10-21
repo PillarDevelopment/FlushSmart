@@ -526,7 +526,7 @@ contract AdminContract is Ownable {
         _;
     }
 
-    function addAddress(address addr) onlyOwner public returns(bool success) {
+    function addAddress(address addr) public onlyOwner returns(bool success) {
         if (!governanceContracts[addr]) {
             governanceContracts[addr] = true;
             emit GovernanceContractAdded(addr);
@@ -534,7 +534,7 @@ contract AdminContract is Ownable {
         }
     }
 
-    function removeAddress(address addr) onlyOwner public returns(bool success) {
+    function removeAddress(address addr) public onlyOwner returns(bool success) {
         if (governanceContracts[addr]) {
             governanceContracts[addr] = false;
             emit GovernanceContractRemoved(addr);
