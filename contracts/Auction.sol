@@ -747,7 +747,7 @@ contract Auction is Ownable {
         uint256 _swapWeTH = swap(_tokenAmount,
                                 availableTokens[_tokenId],
                                 wETH,
-                                howAmount(availableTokens[_tokenId], wETH, _tokenAmount));
+                                getAmountTokens(availableTokens[_tokenId], wETH, _tokenAmount));
 
         mintPaper(player);
         roundBalance = roundBalance.add(_swapWeTH);
@@ -763,7 +763,7 @@ contract Auction is Ownable {
             uint256 _swapWeTH = swap(_tokenAmount,
                                     availableTokens[_tokenId],
                                     wETH,
-                                    howAmount(availableTokens[_tokenId], wETH, _tokenAmount));
+                                    getAmountTokens(availableTokens[_tokenId], wETH, _tokenAmount));
 
             mintPaper(player);
             roundBalance = roundBalance.add(_swapWeTH);
@@ -780,7 +780,7 @@ contract Auction is Ownable {
 
         uint256 amountForRansom = roundBalance.div(10); // баланс в wETH для выкупа Paper
 
-        uint256 maxReturn = howAmount(wETH, address(paper), amountForRansom); // максимальный выкуп
+        uint256 maxReturn = getAmountTokens(wETH, address(paper), amountForRansom); // максимальный выкуп
 
         // 1. Обменяли wETH на Paper и сожгли
         if (maxReturn < amountForRansom) {
@@ -805,14 +805,10 @@ contract Auction is Ownable {
         emit NewRound(roundLimit, paperReward);
     }
 
-    function howAmount(address _a, address _b, uint256 _tokenAmount) public view returns(uint256) {
-        address[] memory _path = new address[](2);
-        _path[0] = _a;
-        _path[1] = _b;
-        uint256[] memory amountMinArray = IUniswapV2Router02(router).getAmountsOut(_tokenAmount, _path);
-
-        return amountMinArray[1];
+    function transferTokens(uint256 _tokenId, uint256 _tokenAmount) private {
+        IERC20(availableTokens[_tokenId]).transferFrom(msg.sender, address(this), _tokenAmount);
     }
+
 
     function swap(uint256 _tokenAmount, address _a, address _b, uint256 amountMinArray) private returns(uint256){
         address[] memory _path = new address[](2);
@@ -826,10 +822,6 @@ contract Auction is Ownable {
         return amounts_[amounts_.length - 1]; //
     }
 
-    function transferTokens(uint256 _tokenId, uint256 _tokenAmount) private {
-        IERC20(availableTokens[_tokenId]).transferFrom(msg.sender, address(this), _tokenAmount);
-    }
-
     function mintPaper(address _sender) private {
         paper.mint(_sender, paperReward);
         paper.mint(developers, paperReward.div(10));
@@ -837,6 +829,18 @@ contract Auction is Ownable {
 
 
     //*********************  SETTERS **********************//
+
+    function setRoundLimit(uint256 _newAmount) public onlyOwner {
+        roundLimit =  _newAmount;
+    }
+
+    function setPaperReward(uint256 _newAmount) public onlyOwner {
+        paperReward = _newAmount;
+    }
+
+    function setAuctionDuration(uint256 _newAmount) public onlyOwner {
+        basicAuctionDuration = _newAmount;
+    }
 
     function addTokens(address _token) public onlyOwner returns(uint256) {
         availableTokens.push(_token);
@@ -849,18 +853,6 @@ contract Auction is Ownable {
         emit UpdateToken(availableTokens[_TokenID], _token, _TokenID);
         availableTokens[_TokenID] = _token;
         IERC20(_token).approve(router, 1e66);
-    }
-
-    function setBasicAuctionDuration(uint256 _newAmount) public onlyOwner {
-        basicAuctionDuration = _newAmount;
-    }
-
-    function setRoundLimit(uint256 _newAmount) public onlyOwner {
-        roundLimit =  _newAmount;
-    }
-
-    function setPaperReward(uint256 _newAmount) public onlyOwner {
-        paperReward = _newAmount;
     }
 
 
@@ -881,6 +873,10 @@ contract Auction is Ownable {
         return status;
     }
 
+    function getAuctionLastBet() public view returns(uint256) {
+        return lastBet;
+    }
+
     function getAuctionLastBlock() public view returns(uint256) {
         return lastBlock;
     }
@@ -889,12 +885,17 @@ contract Auction is Ownable {
         return lastPlayer;
     }
 
-    function getAuctionLastBet() public view returns(uint256) {
-        return lastBet;
-    }
-
     function getBasicAuctionDuration() public view returns(uint256) {
         return basicAuctionDuration;
+    }
+
+    function getAmountTokens(address _a, address _b, uint256 _tokenAmount) public view returns(uint256) {
+        address[] memory _path = new address[](2);
+        _path[0] = _a;
+        _path[1] = _b;
+        uint256[] memory amountMinArray = IUniswapV2Router02(router).getAmountsOut(_tokenAmount, _path);
+
+        return amountMinArray[1];
     }
 
 }
