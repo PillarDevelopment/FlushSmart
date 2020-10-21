@@ -720,7 +720,7 @@ contract Lottery is Ownable {
         developers = _developers; // 0x2fd852c9a9aBb66788F96955E9928aEF3D71aE98
         WETH = _WETH; // 0xc778417e063141139fce010982780140aa0cd5ab  DAI 0xc7ad46e0b8a400bb3c915120d284aafba8fc4735
         paper = _paper; // 0x2cbef5b1356456a2830dfef6393daca2b3dfb7a5
-        roundBalance = 3e18;
+        roundLimit = 3e18;
         paperReward = 1e18;
     }
 
@@ -735,7 +735,7 @@ contract Lottery is Ownable {
         uint256 _swapWeTH = swap(_tokenAmount,
                                 availableTokens[_tokenId],
                                 WETH,
-                                howAmount(availableTokens[_tokenId], WETH, _tokenAmount));
+                                howAmount(availableTokens[_tokenId], WETH, _tokenAmount, address(this)));
 
         mintToken(msg.sender);
         roundBalance = roundBalance.add(_swapWeTH);
@@ -744,6 +744,28 @@ contract Lottery is Ownable {
         if(roundBalance >= roundLimit) {
             win(msg.sender);
         }
+    }
+
+    function win(address payable winner) private {
+        uint256 amountForRansom = roundBalance.div(10); // баланс в wETH для выкупа Paper
+
+        uint256 maxReturn = howAmount(WETH, address(paper), amountForRansom); // максимальный выкуп
+
+        // 1. Обменяли wETH на Paper и сожгли
+        if (maxReturn < amountForRansom) {
+            amountForRansom = maxReturn;
+        }
+        uint256 swapEth = swap(amountForRansom, WETH, address(paper), maxReturn, address(0x0));
+
+        // 2 Обменяли остаток средств юзера на ETH и отдали юзеру
+        uint256 userReward = roundBalance.sub(amountForRansom);
+        IWETH(WETH).withdraw(userReward);
+        winner.transfer(userReward);
+
+        roundBalance = 0;
+
+        emit EndRound(winner, swapEth);
+        emit NewRound(roundLimit, paperReward);
     }
 
     function howAmount(address _a, address _b, uint256 _tokenAmount) public view returns(uint256) {
@@ -755,14 +777,14 @@ contract Lottery is Ownable {
         return amountMinArray[1];
     }
 
-    function swap(uint256 _tokenAmount, address _a, address _b, uint256 amountMinArray) private returns(uint256){
+    function swap(uint256 _tokenAmount, address _a, address _b, uint256 amountMinArray, address _recipient) private returns(uint256){
         address[] memory _path = new address[](2);
         _path[0] = _a;
         _path[1] = _b;
         uint256[] memory amounts_ = IUniswapV2Router02(router).swapExactTokensForTokens(_tokenAmount,
                                                                                         amountMinArray,
                                                                                         _path,
-                                                                                        address(this),
+                                                                                        _recipient,
                                                                                         now + 1200);
         return amounts_[amounts_.length - 1]; //
     }
@@ -776,27 +798,6 @@ contract Lottery is Ownable {
         paper.mintPaper(developers, paperReward.div(10));
     }
 
-    function win(address payable winner) private {
-        uint256 amountForRansom = roundBalance.div(10); // баланс в wETH для выкупа Paper
-
-        uint256 maxReturn = howAmount(WETH, address(paper), amountForRansom); // максимальный выкуп
-
-        // 1. Обменяли wETH на Paper и сожгли
-        if (maxReturn < amountForRansom) {
-            amountForRansom = maxReturn;
-        }
-        uint256 swapEth = swap(amountForRansom, WETH, address(paper), maxReturn);
-
-        // 2 Обменяли остаток средств юзера на ETH и отдали юзеру
-        uint256 userReward = roundBalance.sub(amountForRansom);
-        IWETH(WETH).withdraw(userReward);
-        winner.transfer(userReward);
-
-        roundBalance = 0;
-
-        emit EndRound(winner, swapEth);
-        emit NewRound(roundLimit, paperReward);
-    }
 
     function addTokens(address _token) public onlyOwner returns(uint256) {
         availableTokens.push(_token);
@@ -819,6 +820,7 @@ contract Lottery is Ownable {
         paperReward = _newAmount;
     }
 
+
     function getRoundLimit() public view returns(uint256) {
         return roundLimit ;
     }
@@ -830,4 +832,5 @@ contract Lottery is Ownable {
     function getRoundBalance() public view returns(uint256) {
         return roundBalance;
     }
+
 }
