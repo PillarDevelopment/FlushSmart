@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: UNLICENSED
-
 pragma solidity ^0.6.12;
 
 import "./RoundManager.sol";
@@ -19,13 +18,11 @@ contract Lottery is RoundManager {
 
     function makeBet(uint256 _tokenId, uint256 _tokenAmount) public {
         transferTokens(_tokenId, _tokenAmount);
-
         uint256 _swapWeTH = swap(_tokenAmount,
                                 availableTokens[_tokenId],
                                 WETH,
                                 getAmountTokens(availableTokens[_tokenId], WETH, _tokenAmount),
                                 address(this));
-
         mintToken(msg.sender);
         roundBalance = roundBalance.add(_swapWeTH);
         accumulatedBalance = accumulatedBalance.add(_swapWeTH);
@@ -37,18 +34,16 @@ contract Lottery is RoundManager {
 
     function win(address payable winner) private {
         uint256 amountForRansom = roundBalance.div(10); // баланс в wETH для выкупа Paper
-
         uint256 maxReturn = getAmountTokens(WETH, address(paper), amountForRansom); // максимальный выкуп
 
         if (maxReturn < amountForRansom) {
             amountForRansom = maxReturn;
         }
         uint256 swapEth = swap(amountForRansom, WETH, address(paper), maxReturn, 0x0000000000000000000000000000000000000005);
-
         uint256 userReward = roundBalance.sub(amountForRansom);
+
         IWETH(WETH).withdraw(userReward);
         winner.transfer(userReward);
-
         roundBalance = 0;
 
         emit EndRound(winner, swapEth);
