@@ -5,6 +5,8 @@ import "./RoundManager.sol";
 
 contract Lottery is RoundManager {
 
+    address public immutable WETH;
+
     constructor (address _router, address _developers, address _WETH, PaperToken _paper) public {
         router = _router; // 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D
         developers = _developers; // 0x2fd852c9a9aBb66788F96955E9928aEF3D71aE98
