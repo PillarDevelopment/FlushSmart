@@ -29,7 +29,6 @@ contract Auction is RoundManager {
         }
         else {
             betInAuction(_tokenId, _tokenAmount, msg.sender);
-
         }
     }
 
@@ -37,6 +36,7 @@ contract Auction is RoundManager {
         if(lastBlock.add(basicAuctionDuration ) < block.timestamp && lastBlock != 0) {
             endAuction(lastPlayer);
         } else {
+            require(lastBet < getAmountTokens(availableTokens[_tokenId], WETH, _tokenAmount), "Current bet cannot be less than previous bet");
             lastBet = updateRoundData(_tokenId, _tokenAmount, player);
 
             lastPlayer = player;
