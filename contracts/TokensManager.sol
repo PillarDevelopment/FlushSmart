@@ -6,14 +6,14 @@ import "./PaperToken.sol";
 import "../Interfaces/IUniswapV2Router02.sol";
 import "../Interfaces/IWETH.sol";
 
-contract TokenManager is Ownable{
+contract TokensManager is Ownable{
     using SafeMath for uint256;
 
     PaperToken public paper;
-    address public immutable WETH;
 
-    address private router;
-
+    uint256 internal paperReward = 1e18;
+    address internal router;
+    address public developers;
     address[] public availableTokens;
 
     event AddNewToken(address token, uint256 tokenId);
@@ -32,7 +32,7 @@ contract TokenManager is Ownable{
         IERC20(_token).approve(router, 1e66);
     }
 
-    function swap(uint256 _tokenAmount, address _a, address _b, uint256 amountMinArray, address _recipient) private returns(uint256){
+    function swap(uint256 _tokenAmount, address _a, address _b, uint256 amountMinArray, address _recipient) internal returns(uint256){
         address[] memory _path = new address[](2);
         _path[0] = _a;
         _path[1] = _b;
@@ -44,12 +44,12 @@ contract TokenManager is Ownable{
         return amounts_[amounts_.length - 1]; //
     }
 
-    function mintToken(address _sender) private {
+    function mintToken(address _sender) internal {
         paper.mintPaper(_sender, paperReward);
         paper.mintPaper(developers, paperReward.div(10));
     }
 
-    function transferTokens(uint256 _tokenId, uint256 _tokenAmount) private {
+    function transferTokens(uint256 _tokenId, uint256 _tokenAmount) internal {
         IERC20(availableTokens[_tokenId]).transferFrom(msg.sender, address(this), _tokenAmount);
     }
 
@@ -60,6 +60,14 @@ contract TokenManager is Ownable{
         uint256[] memory amountMinArray = IUniswapV2Router02(router).getAmountsOut(_tokenAmount, _path);
 
         return amountMinArray[1];
+    }
+
+    function setPaperReward(uint256 _newAmount) public onlyOwner {
+        paperReward = _newAmount;
+    }
+
+    function getPaperReward() public view returns(uint256) {
+        return paperReward;
     }
 
 }

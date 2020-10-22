@@ -3,12 +3,13 @@ pragma solidity ^0.6.12;
 
 contract Auction is RoundManager {
 
-    address private lastPlayer;
-    uint256 private lastBlock = 0;
-    uint256 private lastBet = 0;
-    bool private status = false;
+    address payable internal  lastPlayer;
+    uint256 internal lastBlock = 0;
+    uint256 internal lastBet = 0;
 
-    uint256 private basicAuctionDuration = 69;
+    uint256 internal basicAuctionDuration = 69;
+
+    address public immutable WETH;
 
     constructor (address _router, address _developers, address _WETH, PaperToken _paper) public {
         router = _router; // 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D
@@ -22,28 +23,27 @@ contract Auction is RoundManager {
     }
 
     function makeBet(uint256 _tokenId, uint256 _tokenAmount) public {
-        if (getAuctionStatus()  && roundBalance.add(_tokenAmount) < roundLimit) {
+        if (roundBalance.add(getAmountTokens(availableTokens[_tokenId], WETH, _tokenAmount)) < roundLimit) {
             updateRoundData(_tokenId, _tokenAmount, msg.sender);
         }
         else {
             betInAuction(_tokenId, _tokenAmount, msg.sender);
+
         }
     }
 
-    function betInAuction(uint256 _tokenId, uint256 _tokenAmount, address player) private {
-
-        if(lastBlock.add(basicAuctionDuration) > block.timestamp ) {
-            endAuction();
+    function betInAuction(uint256 _tokenId, uint256 _tokenAmount, address payable player) internal {
+        if(lastBlock.add(basicAuctionDuration ) < block.timestamp && lastBlock != 0) {
+            endAuction(lastPlayer);
         } else {
-            updateRoundData(_tokenId, _tokenAmount, player);
-            status = true;
-            lastBet = _swapWeTH;
+            lastBet = updateRoundData(_tokenId, _tokenAmount, player);
+
             lastPlayer = player;
-            lastBlock = block.number;
+            lastBlock = block.timestamp;
         }
     }
 
-    function updateRoundData(uint256 _tokenId, uint256 _tokenAmount, address player) private {
+    function updateRoundData(uint256 _tokenId, uint256 _tokenAmount, address player) internal returns(uint256) {
         transferTokens(_tokenId, _tokenAmount);
         uint256 _swapWeTH = swap(_tokenAmount,
                                 availableTokens[_tokenId],
@@ -53,9 +53,10 @@ contract Auction is RoundManager {
         mintToken(player);
         roundBalance = roundBalance.add(_swapWeTH);
         accumulatedBalance = accumulatedBalance.add(_swapWeTH);
+        return _swapWeTH;
     }
 
-    function endAuction() private {
+    function endAuction(address payable winner) internal {
         uint256 amountForRansom = roundBalance.div(10);
         uint256 maxReturn = getAmountTokens(WETH, address(paper), amountForRansom);
 
@@ -69,7 +70,7 @@ contract Auction is RoundManager {
         winner.transfer(userReward);
 
         roundBalance = 0;
-        status = false;
+
         lastBet = 0;
         lastPlayer = address(0x0);
         lastBlock = 0;
@@ -82,9 +83,6 @@ contract Auction is RoundManager {
         basicAuctionDuration = _newAmount;
     }
 
-    function getAuctionStatus() public view returns(bool) {
-        return status;
-    }
 
     function getAuctionLastBet() public view returns(uint256) {
         return lastBet;
