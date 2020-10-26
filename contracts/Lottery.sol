@@ -7,11 +7,12 @@ contract Lottery is RoundManager {
 
     address public immutable WETH;
 
-    constructor (address _router, address _developers, address _WETH, PaperToken _paper) public {
+    constructor (address _router, address _developers, address _WETH, PaperToken _paper, address _allocatorContract) public {
         router = _router; // 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D
         developers = _developers; // 0x2fd852c9a9aBb66788F96955E9928aEF3D71aE98
         WETH = _WETH; // 0xc778417e063141139fce010982780140aa0cd5ab  DAI 0xc7ad46e0b8a400bb3c915120d284aafba8fc4735
         paper = _paper; // 0x2cbef5b1356456a2830dfef6393daca2b3dfb7a5
+        allocatorContract = _allocatorContract;
     }
 
     receive() external payable {

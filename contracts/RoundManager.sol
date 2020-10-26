@@ -29,4 +29,7 @@ contract RoundManager is TokensManager{
         return accumulatedBalance;
     }
 
+    function getAmountForRansom(uint256 _roundBalance, uint256 _part) public view returns(uint256) {
+        return (_roundBalance.div(100)).mul(_part);
+    }
 }

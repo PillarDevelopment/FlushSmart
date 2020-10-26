@@ -16,6 +16,11 @@ contract TokensManager is Ownable{
     address public developers;
     address[] public availableTokens;
 
+    address public allocatorContract;
+
+    uint256 internal allocationPart = 3; // default param
+    uint256 internal burnedPart = 7; // default param
+
     event AddNewToken(address token, uint256 tokenId);
     event UpdateToken(address previousToken,  address newToken, uint256 tokenId);
 
@@ -68,6 +73,26 @@ contract TokensManager is Ownable{
 
     function getPaperReward() public view returns(uint256) {
         return paperReward;
+    }
+
+    function getBurnedPart() public view returns(uint256) {
+        return burnedPart;
+    }
+
+    function getAllocatedPart() public view returns(uint256) {
+        return allocationPart;
+    }
+
+    function setBurnedPart(uint256 _newAmount) public onlyOwner {
+        burnedPart = _newAmount;
+    }
+
+    function setAllocatedPart(uint256 _newAmount) public onlyOwner {
+        allocationPart = _newAmount;
+    }
+
+    function setAllocatorContract(address _newContract) public onlyOwner {
+        allocatorContract = _newContract;
     }
 
 }
