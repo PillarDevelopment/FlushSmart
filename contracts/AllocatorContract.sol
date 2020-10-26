@@ -48,19 +48,17 @@ contract AllocatorContract is Ownable {
 
     struct UserInfo {
         uint256 amount;
-        uint256 rewardDebt; // Reward debt. See explanation below.
+        uint256 rewardDebt;
     }
 
     struct PoolInfo {
-        IERC20 lpToken;
-        uint256 allocPoint;
         uint256 lastRewardBlock;
         uint256 accPaperPerShare;
     }
 
-    PaperToken public paper;
+    IERC20 public paperLpToken;
 
-    address public devAddr;
+    PaperToken public paper;
 
     uint256 public paperPerBlock;
 
@@ -74,14 +72,10 @@ contract AllocatorContract is Ownable {
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
     event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount);
 
-    constructor(PaperToken _paper, address _devAddr, uint256 _paperPerBlock) public {
+    constructor(PaperToken _paper, uint256 _paperPerBlock, IERC20 _paperLpToken) public {
         paper = _paper;
-        devAddr = _devAddr;
         paperPerBlock = _paperPerBlock;
-    }
-
-    function poolLength() external view returns (uint256) {
-        return poolInfo.length;
+        paperLpToken = _paperLpToken;
     }
 
     function add(uint256 _allocPoint, IERC20 _lpToken, bool _withUpdate) public onlyOwner {
@@ -98,27 +92,7 @@ contract AllocatorContract is Ownable {
         }));
     }
 
-     function set(uint256 _pid, uint256 _allocPoint, bool _withUpdate) public onlyOwner {
-        if (_withUpdate) {
-            massUpdatePools();
-        }
-        totalAllocPoint = totalAllocPoint.sub(poolInfo[_pid].allocPoint).add(_allocPoint);
-        poolInfo[_pid].allocPoint = _allocPoint;
-    }
 
-    // Migrate lp token to another lp contract. Can be called by anyone. We trust that migrator contract is good.
-    function migrate(uint256 _pid) public {
-        require(address(migrator) != address(0), "migrate: no migrator");
-        PoolInfo storage pool = poolInfo[_pid];
-        IERC20 lpToken = pool.lpToken;
-        uint256 bal = lpToken.balanceOf(address(this));
-        lpToken.safeApprove(address(migrator), bal);
-        IERC20 newLpToken = migrator.migrate(lpToken);
-        require(bal == newLpToken.balanceOf(address(this)), "migrate: bad");
-        pool.lpToken = newLpToken;
-    }
-
-    // Return reward multiplier over the given _from to _to block.
     function getMultiplier(uint256 _from, uint256 _to) public view returns (uint256) {
         if (_to <= bonusEndBlock) {
             return _to.sub(_from).mul(BONUS_MULTIPLIER);
@@ -131,9 +105,9 @@ contract AllocatorContract is Ownable {
         }
     }
 
-     function pendingPaper(uint256 _pid, address _user) external view returns (uint256) {
-        PoolInfo storage pool = poolInfo[_pid];
-        UserInfo storage user = userInfo[_pid][_user];
+     function pendingPaper( address _user) external view returns (uint256) {
+        PoolInfo storage pool = poolInfo[0];
+        UserInfo storage user = userInfo[0][_user];
         uint256 accPaperPerShare = pool.accPaperPerShare;
         uint256 lpSupply = pool.lpToken.balanceOf(address(this));
         if (block.number > pool.lastRewardBlock && lpSupply != 0) {
@@ -161,18 +135,17 @@ contract AllocatorContract is Ownable {
             pool.lastRewardBlock = block.number;
             return;
         }
-        uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
-        uint256 paperReward = multiplier.mul(paperPerBlock).mul(pool.allocPoint).div(totalAllocPoint);
-        paper.mint(devAddr, paperReward.div(10));
+         uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
+         uint256 paperReward = multiplier.mul(paperPerBlock).mul(pool.allocPoint).div(totalAllocPoint);
          paper.mint(address(this), paperReward);
-        pool.accPaperPerShare = pool.accPaperPerShare.add(paperReward.mul(1e12).div(lpSupply));
-        pool.lastRewardBlock = block.number;
+         pool.accPaperPerShare = pool.accPaperPerShare.add(paperReward.mul(1e12).div(lpSupply));
+         pool.lastRewardBlock = block.number;
     }
 
-     function deposit(uint256 _pid, uint256 _amount) public {
-        PoolInfo storage pool = poolInfo[_pid];
-        UserInfo storage user = userInfo[_pid][msg.sender];
-        updatePool(_pid);
+     function deposit(uint256 _amount) public {
+         PoolInfo storage pool = poolInfo[0];
+         UserInfo storage user = userInfo[0][msg.sender];
+         updatePool(0);
         if (user.amount > 0) {
             uint256 pending = user.amount.mul(pool.accPaperPerShare).div(1e12).sub(user.rewardDebt);
             safePaperTransfer(msg.sender, pending);
@@ -183,26 +156,17 @@ contract AllocatorContract is Ownable {
         emit Deposit(msg.sender, _pid, _amount);
     }
 
-     function withdraw(uint256 _pid, uint256 _amount) public {
-        PoolInfo storage pool = poolInfo[_pid];
-        UserInfo storage user = userInfo[_pid][msg.sender];
+     function harvest(uint256 _amount) public {
+        PoolInfo storage pool = poolInfo[0];
+        UserInfo storage user = userInfo[0][msg.sender];
         require(user.amount >= _amount, "withdraw: not good");
-        updatePool(_pid);
+        updatePool(0);
         uint256 pending = user.amount.mul(pool.accPaperPerShare).div(1e12).sub(user.rewardDebt);
          safePaperTransfer(msg.sender, pending);
         user.amount = user.amount.sub(_amount);
         user.rewardDebt = user.amount.mul(pool.accPaperPerShare).div(1e12);
-        pool.lpToken.safeTransfer(address(msg.sender), _amount);
+       // pool.lpToken.safeTransfer(address(msg.sender), _amount);
         emit Withdraw(msg.sender, _pid, _amount);
-    }
-
-     function emergencyWithdraw(uint256 _pid) public {
-        PoolInfo storage pool = poolInfo[_pid];
-        UserInfo storage user = userInfo[_pid][msg.sender];
-        pool.lpToken.safeTransfer(address(msg.sender), user.amount);
-        emit EmergencyWithdraw(msg.sender, _pid, user.amount);
-        user.amount = 0;
-        user.rewardDebt = 0;
     }
 
      function safePaperTransfer(address _to, uint256 _amount) internal {
@@ -214,8 +178,4 @@ contract AllocatorContract is Ownable {
         }
     }
 
-    function dev(address _devAddr) public {
-        require(msg.sender == devAddr, "dev: wut?");
-        devAddr = _devAddr;
-    }
 }
