@@ -46,52 +46,48 @@ contract AllocatorContract is Ownable {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
-    struct UserInfo {
-        uint256 amount;
-        uint256 rewardDebt;
-    }
-
-    struct PoolInfo {
-        uint256 lastRewardBlock;
-        uint256 accPaperPerShare;
-    }
-
-    IERC20 public paperLpToken;
-
+    IERC20 public paperWethLP;
     PaperToken public paper;
 
-    uint256 public paperPerBlock;
+    uint256 lastRewardBlock;
 
-    PoolInfo[] public poolInfo;
-
-    mapping (uint256 => mapping (address => UserInfo)) public userInfo;
-
-    uint256 public totalAllocPoint = 0;
+    mapping (address => uint256) public userPart;
 
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
-    event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
-    event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount);
+    event Harvest(address indexed user, uint256 indexed pid, uint256 amount);
 
-    constructor(PaperToken _paper, uint256 _paperPerBlock, IERC20 _paperLpToken) public {
+    constructor(PaperToken _paper, IERC20 _paperLpToken) public {
         paper = _paper;
-        paperPerBlock = _paperPerBlock;
-        paperLpToken = _paperLpToken;
+        paperLpToken = paperWethLP;
     }
 
-    function add(uint256 _allocPoint, IERC20 _lpToken, bool _withUpdate) public onlyOwner {
-        if (_withUpdate) {
-            massUpdatePools();
+    function deposit(uint256 _amount) public {
+        PoolInfo storage pool = poolInfo[0];
+        UserInfo storage user = userInfo[0][msg.sender];
+        updatePool(0);
+        if (user.amount > 0) {
+            uint256 pending = user.amount.mul(pool.accPaperPerShare).div(1e12).sub(user.rewardDebt);
+            safePaperTransfer(msg.sender, pending);
         }
-        uint256 lastRewardBlock = block.number > startBlock ? block.number : startBlock;
-        totalAllocPoint = totalAllocPoint.add(_allocPoint);
-        poolInfo.push(PoolInfo({
-        lpToken: _lpToken,
-        allocPoint: _allocPoint,
-        lastRewardBlock: lastRewardBlock,
-        accPaperPerShare: 0
-        }));
+        pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
+        user.amount = user.amount.add(_amount);
+        user.rewardDebt = user.amount.mul(pool.accPaperPerShare).div(1e12);
+        emit Deposit(msg.sender, _pid, _amount);
     }
 
+
+    function harvest(uint256 _amount) public {
+        PoolInfo storage pool = poolInfo[0];
+        UserInfo storage user = userInfo[0][msg.sender];
+        require(user.amount >= _amount, "withdraw: not good");
+        updatePool(0);
+        uint256 pending = user.amount.mul(pool.accPaperPerShare).div(1e12).sub(user.rewardDebt);
+        safePaperTransfer(msg.sender, pending);
+        user.amount = user.amount.sub(_amount);
+        user.rewardDebt = user.amount.mul(pool.accPaperPerShare).div(1e12);
+        // pool.lpToken.safeTransfer(address(msg.sender), _amount);
+        emit Withdraw(msg.sender, _pid, _amount);
+    }
 
     function getMultiplier(uint256 _from, uint256 _to) public view returns (uint256) {
         if (_to <= bonusEndBlock) {
@@ -118,13 +114,6 @@ contract AllocatorContract is Ownable {
         return user.amount.mul(accPaperPerShare).div(1e12).sub(user.rewardDebt);
     }
 
-     function massUpdatePools() public {
-        uint256 length = poolInfo.length;
-        for (uint256 pid = 0; pid < length; ++pid) {
-            updatePool(pid);
-        }
-    }
-
      function updatePool(uint256 _pid) public {
         PoolInfo storage pool = poolInfo[_pid];
         if (block.number <= pool.lastRewardBlock) {
@@ -140,33 +129,6 @@ contract AllocatorContract is Ownable {
          paper.mint(address(this), paperReward);
          pool.accPaperPerShare = pool.accPaperPerShare.add(paperReward.mul(1e12).div(lpSupply));
          pool.lastRewardBlock = block.number;
-    }
-
-     function deposit(uint256 _amount) public {
-         PoolInfo storage pool = poolInfo[0];
-         UserInfo storage user = userInfo[0][msg.sender];
-         updatePool(0);
-        if (user.amount > 0) {
-            uint256 pending = user.amount.mul(pool.accPaperPerShare).div(1e12).sub(user.rewardDebt);
-            safePaperTransfer(msg.sender, pending);
-        }
-        pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
-        user.amount = user.amount.add(_amount);
-        user.rewardDebt = user.amount.mul(pool.accPaperPerShare).div(1e12);
-        emit Deposit(msg.sender, _pid, _amount);
-    }
-
-     function harvest(uint256 _amount) public {
-        PoolInfo storage pool = poolInfo[0];
-        UserInfo storage user = userInfo[0][msg.sender];
-        require(user.amount >= _amount, "withdraw: not good");
-        updatePool(0);
-        uint256 pending = user.amount.mul(pool.accPaperPerShare).div(1e12).sub(user.rewardDebt);
-         safePaperTransfer(msg.sender, pending);
-        user.amount = user.amount.sub(_amount);
-        user.rewardDebt = user.amount.mul(pool.accPaperPerShare).div(1e12);
-       // pool.lpToken.safeTransfer(address(msg.sender), _amount);
-        emit Withdraw(msg.sender, _pid, _amount);
     }
 
      function safePaperTransfer(address _to, uint256 _amount) internal {
