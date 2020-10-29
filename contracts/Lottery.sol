@@ -40,23 +40,21 @@ contract Lottery is RoundManager {
         uint256 amountToBurn = getAmountForRansom(roundBalance, burnedPart);
         uint256 amountToAllocation = getAmountForRansom(roundBalance, allocationPart);
 
-        uint256 maxReturnToBurn = getAmountTokens(WETH, address(paper), amountToBurn);
-        uint256 maxReturnToAllocation = getAmountTokens(WETH, address(paper), amountToAllocation);
+        uint256 maxReturn = getAmountTokens(WETH, address(paper), amountToBurn.add(amountToAllocation));
 
-        if (maxReturnToBurn.add(maxReturnToAllocation) < amountToBurn.add(amountToAllocation)) {
-
-            amountToBurn = 1; // todo посчитать пропорции в получившемся числе
-            amountToAllocation = 1;
+        if (maxReturn < amountToBurn.add(amountToAllocation)) {
+            amountToBurn = amountToBurn.mul(maxReturn.div(amountToBurn.add(amountToAllocation)));              // todo посчитать пропорции в получившемся числе
+            amountToAllocation = amountToAllocation.mul(maxReturn.div(amountToBurn.add(amountToAllocation)));
         }
-            uint256 swapEth = swap(amountToBurn, WETH, address(paper), maxReturnToBurn, 0x0000000000000000000000000000000000000005);
-            uint256 swapEth = swap(amountToAllocation, WETH, address(paper), maxReturnToAllocation, allocatorContract);
-            uint256 userReward = roundBalance.sub(amountToBurn.add(amountToAllocation));
+        uint256 burnPaper = swap(amountToBurn, WETH, address(paper), getAmountTokens(WETH, address(paper), amountToBurn), 0x0000000000000000000000000000000000000005);
+        uint256 allocatePaper = swap(amountToAllocation, WETH, address(paper), getAmountTokens(WETH, address(paper), amountToAllocation), allocatorContract);
+        uint256 userReward = roundBalance.sub(amountToBurn.add(amountToAllocation));
 
         IWETH(WETH).withdraw(userReward);
         winner.transfer(userReward);
         roundBalance = 0;
 
-        emit EndRound(winner, swapEth);
+        emit EndRound(winner, burnPaper.add(allocatePaper));
         emit NewRound(roundLimit, paperReward);
     }
 
