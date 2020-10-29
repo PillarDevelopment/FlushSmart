@@ -2,6 +2,7 @@
 pragma solidity ^0.6.12;
 
 import "./RoundManager.sol";
+
 contract Auction is RoundManager {
 
     address payable internal  lastPlayer;
