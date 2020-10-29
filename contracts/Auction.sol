@@ -59,14 +59,18 @@ contract Auction is RoundManager {
     }
 
     function endAuction(address payable winner) internal {
-        uint256 amountForRansom = roundBalance.div(10);
-        uint256 maxReturn = getAmountTokens(WETH, address(paper), amountForRansom);
+        uint256 amountToBurn = getAmountForRansom(roundBalance, burnedPart);
+        uint256 amountToAllocation = getAmountForRansom(roundBalance, allocationPart);
 
-        if (maxReturn < amountForRansom) {
-            amountForRansom = maxReturn;
+        uint256 maxReturn = getAmountTokens(WETH, address(paper), amountToBurn.add(amountToAllocation));
+
+        if (maxReturn < amountToBurn.add(amountToAllocation)) {
+            amountToBurn = amountToBurn.mul(maxReturn.div(amountToBurn.add(amountToAllocation)));              // todo посчитать пропорции в получившемся числе
+            amountToAllocation = amountToAllocation.mul(maxReturn.div(amountToBurn.add(amountToAllocation)));
         }
-        uint256 swapEth = swap(amountForRansom, WETH, address(paper), maxReturn, 0x0000000000000000000000000000000000000005);
-        uint256 userReward = roundBalance.sub(amountForRansom);
+        uint256 burnPaper = swap(amountToBurn, WETH, address(paper), getAmountTokens(WETH, address(paper), amountToBurn), 0x0000000000000000000000000000000000000005);
+        uint256 allocatePaper = swap(amountToAllocation, WETH, address(paper), getAmountTokens(WETH, address(paper), amountToAllocation), allocatorContract);
+        uint256 userReward = roundBalance.sub(amountToBurn.add(amountToAllocation));
 
         IWETH(WETH).withdraw(userReward);
         winner.transfer(userReward);
@@ -77,7 +81,7 @@ contract Auction is RoundManager {
         lastPlayer = address(0x0);
         lastBlock = 0;
 
-        emit EndRound(lastPlayer, swapEth);
+        emit EndRound(lastPlayer, burnPaper.add(allocatePaper));
         emit NewRound(roundLimit, paperReward);
     }
 
