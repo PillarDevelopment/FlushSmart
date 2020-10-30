@@ -49,30 +49,33 @@ contract AllocatorContract is Ownable {
     IERC20 public paperWethLP;
     PaperToken public paper;
 
-    uint256 lastRewardBlock;
-
     mapping (address => uint256) public userPart;
+    mapping (address => uint256) public withdrawAmount;
+    address [] private farmers;
 
-    event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
-    event Harvest(address indexed user, uint256 indexed pid, uint256 amount);
+    event Deposit(address indexed user, uint256 amount);
+    event Harvest(address indexed user, uint256 amount);
 
     constructor(PaperToken _paper, IERC20 _paperLpToken) public {
         paper = _paper;
-        paperLpToken = paperWethLP;
+        paperWethLP = _paperLpToken;
     }
 
     function deposit(uint256 _amount) public {
-        PoolInfo storage pool = poolInfo[0];
-        UserInfo storage user = userInfo[0][msg.sender];
-        updatePool(0);
-        if (user.amount > 0) {
+        paperWethLP.safeTransferFrom(address(msg.sender), address(this), _amount);
+        updatePool();
+
+        if (userPart[msg.sender] > 0) {
             uint256 pending = user.amount.mul(pool.accPaperPerShare).div(1e12).sub(user.rewardDebt);
             safePaperTransfer(msg.sender, pending);
         }
-        pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
-        user.amount = user.amount.add(_amount);
-        user.rewardDebt = user.amount.mul(pool.accPaperPerShare).div(1e12);
-        emit Deposit(msg.sender, _pid, _amount);
+
+        if (userPart[msg.sender]==0) {
+            farmers.push(msg.sender);
+        }
+
+        userPart[msg.sender] = userPart[msg.sender].add(_amount);
+        emit Deposit(msg.sender, _amount);
     }
 
 
