@@ -50,91 +50,47 @@ contract AllocatorContract is Ownable {
     PaperToken public paper;
 
     mapping (address => uint256) public userPart;
-    mapping (address => uint256) public withdrawAmount;
+    mapping (address => uint256) public pendingAmount;
     address [] private farmers;
 
     event Deposit(address indexed user, uint256 amount);
     event Harvest(address indexed user, uint256 amount);
+
 
     constructor(PaperToken _paper, IERC20 _paperLpToken) public {
         paper = _paper;
         paperWethLP = _paperLpToken;
     }
 
+    
     function deposit(uint256 _amount) public {
         paperWethLP.safeTransferFrom(address(msg.sender), address(this), _amount);
-        updatePool();
 
-        if (userPart[msg.sender] > 0) {
-            uint256 pending = user.amount.mul(pool.accPaperPerShare).div(1e12).sub(user.rewardDebt);
-            safePaperTransfer(msg.sender, pending);
-        }
-
-        if (userPart[msg.sender]==0) {
+        if(userPart[msg.sender] == 0) {
             farmers.push(msg.sender);
         }
-
         userPart[msg.sender] = userPart[msg.sender].add(_amount);
+        updatePool();
         emit Deposit(msg.sender, _amount);
     }
 
 
-    function harvest(uint256 _amount) public {
-        PoolInfo storage pool = poolInfo[0];
-        UserInfo storage user = userInfo[0][msg.sender];
-        require(user.amount >= _amount, "withdraw: not good");
-        updatePool(0);
-        uint256 pending = user.amount.mul(pool.accPaperPerShare).div(1e12).sub(user.rewardDebt);
-        safePaperTransfer(msg.sender, pending);
-        user.amount = user.amount.sub(_amount);
-        user.rewardDebt = user.amount.mul(pool.accPaperPerShare).div(1e12);
-        // pool.lpToken.safeTransfer(address(msg.sender), _amount);
-        emit Withdraw(msg.sender, _pid, _amount);
+    function harvest() public {
+        uint256 paperReward = pendingAmount[msg.sender];
+        paper.transfer(msg.sender, paperReward);
+        pendingAmount[msg.sender] = 0;
+        emit Withdraw(msg.sender, paperReward);
     }
 
-    function getMultiplier(uint256 _from, uint256 _to) public view returns (uint256) {
-        if (_to <= bonusEndBlock) {
-            return _to.sub(_from).mul(BONUS_MULTIPLIER);
-        } else if (_from >= bonusEndBlock) {
-            return _to.sub(_from);
-        } else {
-            return bonusEndBlock.sub(_from).mul(BONUS_MULTIPLIER).add(
-                _to.sub(bonusEndBlock)
-            );
-        }
-    }
 
-     function pendingPaper( address _user) external view returns (uint256) {
-        PoolInfo storage pool = poolInfo[0];
-        UserInfo storage user = userInfo[0][_user];
-        uint256 accPaperPerShare = pool.accPaperPerShare;
-        uint256 lpSupply = pool.lpToken.balanceOf(address(this));
-        if (block.number > pool.lastRewardBlock && lpSupply != 0) {
-            uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
-            uint256 paperReward = multiplier.mul(paperPerBlock).mul(pool.allocPoint).div(totalAllocPoint);
-            accPaperPerShare = accPaperPerShare.add(paperReward.mul(1e12).div(lpSupply));
-        }
-        return user.amount.mul(accPaperPerShare).div(1e12).sub(user.rewardDebt);
-    }
+    function updatePool() public {
+         for(uint i = 0; i<farmers.length; i++) {
+             pendingAmount[farmers[i]] = userPart[farmers[i]].div(paperWethLP.balanceOf(address(this)));
+         }
+     }
 
-     function updatePool(uint256 _pid) public {
-        PoolInfo storage pool = poolInfo[_pid];
-        if (block.number <= pool.lastRewardBlock) {
-            return;
-        }
-        uint256 lpSupply = pool.lpToken.balanceOf(address(this));
-        if (lpSupply == 0) {
-            pool.lastRewardBlock = block.number;
-            return;
-        }
-         uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
-         uint256 paperReward = multiplier.mul(paperPerBlock).mul(pool.allocPoint).div(totalAllocPoint);
-         paper.mint(address(this), paperReward);
-         pool.accPaperPerShare = pool.accPaperPerShare.add(paperReward.mul(1e12).div(lpSupply));
-         pool.lastRewardBlock = block.number;
-    }
 
-     function safePaperTransfer(address _to, uint256 _amount) internal {
+    function safePaperTransfer(address _to, uint256 _amount) internal {
         uint256 paperBal = paper.balanceOf(address(this));
         if (_amount > paperBal) {
             paper.transfer(_to, paperBal);
