@@ -49,9 +49,9 @@ contract AllocatorContract is Ownable {
     IERC20 public paperWethLP;
     PaperToken public paper;
 
-    mapping (address => uint256) public userPart; // Paper/Weth
-    mapping (address => uint256) public pendingAmount; // Paper
-    mapping (address => uint256) public withdrawAmount; // Paper
+    mapping (address => uint256) private userPart; // Paper/Weth
+    mapping (address => uint256) private pendingAmount; // Paper
+    mapping (address => uint256) private withdrawAmount; // Paper
 
     address [] private farmers;
 
@@ -121,6 +121,16 @@ contract AllocatorContract is Ownable {
 
     function getPaperEthBalance() public view returns(uint256) {
         return paperWethLP.balanceOf(address(this));
+    }
+
+
+    function getFarmersCount() public view returns(uint256) {
+        return farmers.length;
+    }
+
+
+    function getFarmerAddress(uint256 _farmerId) public view returns(address) {
+        return farmers[_farmerId];
     }
 
 }
