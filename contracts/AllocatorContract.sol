@@ -100,4 +100,27 @@ contract AllocatorContract is Ownable {
         }
     }
 
+
+    function getWithdrawAmount(address _user) public view returns(uint256) {
+        return withdrawAmount[_user];
+    }
+
+    function getPendingAmount(address _user) public view returns(uint256) {
+        return pendingAmount[_user];
+    }
+
+    function getUserPartAmount(address _user) public view returns(uint256) {
+        return userPart[_user];
+    }
+
+
+    function getPaperBalance() public view returns(uint256) {
+        return paper.balanceOf(address(this));
+    }
+
+
+    function getPaperEthBalance() public view returns(uint256) {
+        return paperWethLP.balanceOf(address(this));
+    }
+
 }
