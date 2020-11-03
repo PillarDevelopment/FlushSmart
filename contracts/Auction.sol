@@ -82,6 +82,9 @@ contract Auction is RoundManager {
         lastPlayer = address(0x0);
         lastBlock = 0;
 
+        countOfRewards += 1;
+        finishedRounds.push(Round({winner: winner, prize: userReward}));
+
         emit EndRound(lastPlayer, burnPaper.add(allocatePaper));
         emit NewRound(roundLimit, paperReward);
     }

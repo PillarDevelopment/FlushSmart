@@ -54,6 +54,9 @@ contract Lottery is RoundManager {
         winner.transfer(userReward);
         roundBalance = 0;
 
+        countOfRewards += 1;
+        finishedRounds.push(Round({winner: winner, prize: userReward}));
+
         emit EndRound(winner, burnPaper.add(allocatePaper));
         emit NewRound(roundLimit, paperReward);
     }
