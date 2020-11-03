@@ -31,11 +31,13 @@ contract TokensManager is Ownable{
         return availableTokens.length;
     }
 
+
     function setToken(uint256 _tokenId, address _token) public onlyOwner {
         emit UpdateToken(availableTokens[_tokenId], _token, _tokenId);
         availableTokens[_tokenId] = _token;
         IERC20(_token).approve(router, 1e66);
     }
+
 
     function swap(uint256 _tokenAmount, address _a, address _b, uint256 amountMinArray, address _recipient) internal returns(uint256){
         address[] memory _path = new address[](2);
@@ -49,14 +51,17 @@ contract TokensManager is Ownable{
         return amounts_[amounts_.length - 1]; //
     }
 
+
     function mintToken(address _sender) internal {
         paper.mintPaper(_sender, paperReward);
         paper.mintPaper(developers, paperReward.div(10));
     }
 
+
     function transferTokens(uint256 _tokenId, uint256 _tokenAmount) internal {
         IERC20(availableTokens[_tokenId]).transferFrom(msg.sender, address(this), _tokenAmount);
     }
+
 
     function getAmountTokens(address _a, address _b, uint256 _tokenAmount) public view returns(uint256) {
         address[] memory _path = new address[](2);
@@ -67,29 +72,36 @@ contract TokensManager is Ownable{
         return amountMinArray[1];
     }
 
+
     function setPaperReward(uint256 _newAmount) public onlyOwner {
         paperReward = _newAmount;
     }
+
 
     function getPaperReward() public view returns(uint256) {
         return paperReward;
     }
 
+
     function getBurnedPart() public view returns(uint256) {
         return burnedPart;
     }
+
 
     function getAllocatedPart() public view returns(uint256) {
         return allocationPart;
     }
 
+
     function setBurnedPart(uint256 _newAmount) public onlyOwner {
         burnedPart = _newAmount;
     }
 
+
     function setAllocatedPart(uint256 _newAmount) public onlyOwner {
         allocationPart = _newAmount;
     }
+
 
     function setAllocatorContract(address _newContract) public onlyOwner {
         allocatorContract = _newContract;

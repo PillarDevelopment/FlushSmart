@@ -15,9 +15,11 @@ contract Lottery is RoundManager {
         allocatorContract = _allocatorContract;
     }
 
+
     receive() external payable {
         assert(msg.sender == WETH); // only accept ETH via fallback from the WETH contract
     }
+
 
     function makeBet(uint256 _tokenId, uint256 _tokenAmount) public {
         transferTokens(_tokenId, _tokenAmount);
@@ -34,6 +36,7 @@ contract Lottery is RoundManager {
             win(msg.sender);
         }
     }
+
 
     function win(address payable winner) private {
 
@@ -53,8 +56,6 @@ contract Lottery is RoundManager {
         IWETH(WETH).withdraw(userReward);
         winner.transfer(userReward);
         roundBalance = 0;
-
-        countOfRewards += 1;
         finishedRounds.push(Round({winner: winner, prize: userReward}));
 
         emit EndRound(winner, burnPaper.add(allocatePaper));

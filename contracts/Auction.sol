@@ -13,6 +13,7 @@ contract Auction is RoundManager {
 
     address public immutable WETH;
 
+
     constructor (address _router, address _developers, address _WETH, PaperToken _paper, address _allocatorContract) public {
         router = _router; // 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D
         developers = _developers; // 0x2fd852c9a9aBb66788F96955E9928aEF3D71aE98
@@ -21,9 +22,11 @@ contract Auction is RoundManager {
         allocatorContract = _allocatorContract;
     }
 
+
     receive() external payable {
         assert(msg.sender == WETH); // only accept ETH via fallback from the WETH contract
     }
+
 
     function makeBet(uint256 _tokenId, uint256 _tokenAmount) public {
         if (roundBalance.add(getAmountTokens(availableTokens[_tokenId], WETH, _tokenAmount)) < roundLimit) {
@@ -33,6 +36,7 @@ contract Auction is RoundManager {
             betInAuction(_tokenId, _tokenAmount, msg.sender);
         }
     }
+
 
     function betInAuction(uint256 _tokenId, uint256 _tokenAmount, address payable player) internal {
         if(lastBlock.add(basicAuctionDuration ) < block.timestamp && lastBlock != 0) {
@@ -46,6 +50,7 @@ contract Auction is RoundManager {
         }
     }
 
+
     function updateRoundData(uint256 _tokenId, uint256 _tokenAmount, address player) internal returns(uint256) {
         transferTokens(_tokenId, _tokenAmount);
         uint256 _swapWeTH = swap(_tokenAmount,
@@ -58,6 +63,7 @@ contract Auction is RoundManager {
         accumulatedBalance = accumulatedBalance.add(_swapWeTH);
         return _swapWeTH;
     }
+
 
     function endAuction(address payable winner) internal {
         uint256 amountToBurn = getAmountForRansom(roundBalance, burnedPart);
@@ -75,19 +81,16 @@ contract Auction is RoundManager {
 
         IWETH(WETH).withdraw(userReward);
         winner.transfer(userReward);
-
         roundBalance = 0;
-
         lastBet = 0;
         lastPlayer = address(0x0);
         lastBlock = 0;
-
-        countOfRewards += 1;
         finishedRounds.push(Round({winner: winner, prize: userReward}));
 
         emit EndRound(lastPlayer, burnPaper.add(allocatePaper));
         emit NewRound(roundLimit, paperReward);
     }
+
 
     function setAuctionDuration(uint256 _newAmount) public onlyOwner {
         basicAuctionDuration = _newAmount;
@@ -98,13 +101,16 @@ contract Auction is RoundManager {
         return lastBet;
     }
 
+
     function getAuctionLastBlock() public view returns(uint256) {
         return lastBlock;
     }
 
+
     function getAuctionLastPlayer() public view returns(address) {
         return lastPlayer;
     }
+
 
     function getBasicAuctionDuration() public view returns(uint256) {
         return basicAuctionDuration;
