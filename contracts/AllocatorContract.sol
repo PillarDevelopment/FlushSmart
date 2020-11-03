@@ -84,6 +84,7 @@ contract AllocatorContract is Ownable {
 
 
     function harvest() public {
+        updatePool();
         uint256 paperReward = pendingAmount[msg.sender].sub(withdrawAmount[msg.sender]);
         paper.transfer(msg.sender, paperReward);
         withdrawAmount[msg.sender] = withdrawAmount[msg.sender].add(paperReward);
