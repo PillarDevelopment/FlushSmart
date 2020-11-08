@@ -13,6 +13,7 @@ contract Auction is RoundManager {
 
     address public immutable WETH;
 
+    event AuctionStep(uint256 lastBet, address lastPlayer, uint256 lastBlock);
 
     constructor (address _router, address _developers, address _WETH, PaperToken _paper, address _allocatorContract) public {
         router = _router; // 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D
@@ -29,6 +30,8 @@ contract Auction is RoundManager {
 
 
     function makeBet(uint256 _tokenId, uint256 _tokenAmount) public {
+        require(lastBet < getAmountTokens(availableTokens[_tokenId], WETH, _tokenAmount), "Current bet cannot be less than previous bet");
+
         if (roundBalance.add(getAmountTokens(availableTokens[_tokenId], WETH, _tokenAmount)) < roundLimit) {
             updateRoundData(_tokenId, _tokenAmount, msg.sender);
         }
@@ -38,15 +41,15 @@ contract Auction is RoundManager {
     }
 
 
-    function betInAuction(uint256 _tokenId, uint256 _tokenAmount, address payable player) internal {
-        if(lastBlock.add(basicAuctionDuration ) < block.timestamp && lastBlock != 0) {
+
+    function betInAuction(uint256 _tokenId, uint256 _tokenAmount, address payable player) public {
+        if(lastBlock.add(basicAuctionDuration) < block.number && lastBlock != 0) {
             endAuction(lastPlayer);
         } else {
-            require(lastBet < getAmountTokens(availableTokens[_tokenId], WETH, _tokenAmount), "Current bet cannot be less than previous bet");
             lastBet = updateRoundData(_tokenId, _tokenAmount, player);
-
             lastPlayer = player;
-            lastBlock = block.timestamp;
+            lastBlock = block.number;
+            emit AuctionStep(lastBet, lastPlayer, lastBlock);
         }
     }
 
