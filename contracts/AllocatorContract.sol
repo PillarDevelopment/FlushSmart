@@ -78,7 +78,7 @@ contract AllocatorContract is Ownable {
 
     function updatePool() public {
         for(uint i = 0; i<farmers.length; i++) {
-            pendingAmount[farmers[i]] = (userPart[farmers[i]].div(paperWethLP.balanceOf(address(this)))).mul(paper.balanceOf(address(this))); // сколько ожидается пейперов для каждого
+            pendingAmount[farmers[i]] = (((userPart[farmers[i]].mul(100)).div(paperWethLP.balanceOf(address(this)))).mul(paper.balanceOf(address(this)))).div(100);
         }
     }
 
