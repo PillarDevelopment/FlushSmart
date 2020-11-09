@@ -53,6 +53,8 @@ contract AllocatorContract is Ownable {
     mapping (address => uint256) private pendingAmount; // Paper
     mapping (address => uint256) private withdrawAmount; // Paper
 
+    uint256 public paperTotalBalance;
+
     address [] private farmers;
 
     event Deposit(address indexed user, uint256 amount);
@@ -71,6 +73,7 @@ contract AllocatorContract is Ownable {
             farmers.push(msg.sender);
         }
         userPart[msg.sender] = userPart[msg.sender].add(_amount);
+        updatePaperTotalBalance();
         updatePool();
         emit Deposit(msg.sender, _amount);
     }
@@ -78,16 +81,31 @@ contract AllocatorContract is Ownable {
 
     function updatePool() public {
         for(uint i = 0; i<farmers.length; i++) {
-            pendingAmount[farmers[i]] = (((userPart[farmers[i]].mul(100)).div(paperWethLP.balanceOf(address(this)))).mul(paper.balanceOf(address(this)))).div(100);
+            pendingAmount[farmers[i]] = (((userPart[farmers[i]].mul(100)).div(paperWethLP.balanceOf(address(this)))).mul(paperTotalBalance)).div(100);
+
+            if (pendingAmount[farmers[i]] <= withdrawAmount[farmers[i]]) {
+                pendingAmount[farmers[i]] = 0;
+            } else
+                pendingAmount[farmers[i]] -= withdrawAmount[farmers[i]];
+        }
+    }
+
+
+    function updatePaperTotalBalance() public {
+        paperTotalBalance = paper.balanceOf(address(this));
+        for(uint i = 0; i<farmers.length; i++) {
+            paperTotalBalance = paperTotalBalance.add(withdrawAmount[farmers[i]]);
         }
     }
 
 
     function harvest() public {
         updatePool();
+        require(pendingAmount[msg.sender] > withdrawAmount[msg.sender], "Insufficient pending amount, please, deposit");
         uint256 paperReward = pendingAmount[msg.sender].sub(withdrawAmount[msg.sender]);
         paper.transfer(msg.sender, paperReward);
         withdrawAmount[msg.sender] = withdrawAmount[msg.sender].add(paperReward);
+        updatePaperTotalBalance();
         emit Harvest(msg.sender, paperReward);
     }
 
@@ -106,17 +124,14 @@ contract AllocatorContract is Ownable {
         return withdrawAmount[_user];
     }
 
+
     function getPendingAmount(address _user) public view returns(uint256) {
         return pendingAmount[_user];
     }
 
+
     function getUserPartAmount(address _user) public view returns(uint256) {
         return userPart[_user];
-    }
-
-
-    function getPaperBalance() public view returns(uint256) {
-        return paper.balanceOf(address(this));
     }
 
 
