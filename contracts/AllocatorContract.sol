@@ -86,7 +86,7 @@ contract AllocatorContract is Ownable {
             if (pendingAmount[farmers[i]] <= withdrawAmount[farmers[i]]) {
                 pendingAmount[farmers[i]] = 0;
             } else
-                pendingAmount[farmers[i]] -= withdrawAmount[farmers[i]];
+                pendingAmount[farmers[i]] = pendingAmount[farmers[i]].sub(withdrawAmount[farmers[i]]);
         }
     }
 
