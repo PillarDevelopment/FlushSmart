@@ -5,10 +5,6 @@ import "./RoundManager.sol";
 
 contract Auction is RoundManager {
 
-    struct Round {
-        address winner;
-        uint256 prize;
-    }
 
     address payable internal  lastPlayer;
     uint256 internal lastBlock = 0;
@@ -17,8 +13,6 @@ contract Auction is RoundManager {
     uint256 internal basicAuctionDuration = 69;
 
     address public immutable WETH;
-
-    Round[] internal finishedRounds;
 
     event AuctionStep(uint256 lastBet, address lastPlayer, uint256 lastBlock);
 
@@ -130,16 +124,5 @@ contract Auction is RoundManager {
     function getBasicAuctionDuration() public view returns(uint256) {
         return basicAuctionDuration;
     }
-
-
-    function getCountOfRewards() public view returns(uint256) {
-        return finishedRounds.length;
-    }
-
-
-    function getWinner(uint256 _id) public view returns(address _winner, uint256 _prize) {
-        _winner = finishedRounds[_id].winner;
-        _prize = finishedRounds[_id].prize;
-    }
-
+    
 }

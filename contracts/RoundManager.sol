@@ -9,10 +9,17 @@ contract RoundManager is TokensManager {
     uint256 internal roundBalance;
     uint256 internal accumulatedBalance;
 
+    struct Round {
+        address winner;
+        uint256 prize;
+    }
+
     struct Rate {
         uint256 rate;
         uint256 round;
     }
+
+    Round[] internal finishedRounds;
 
     mapping (address => Rate) public lastRate;
 
@@ -48,6 +55,16 @@ contract RoundManager is TokensManager {
     function getLastBet(address _userAddress) public view returns(uint256 amount, uint256 roundId) {
         amount = lastRate[_userAddress].rate;
         roundId = lastRate[_userAddress].round;
+    }
+
+    function getWinner(uint256 _id) public view returns(address _winner, uint256 _prize) {
+        _winner = finishedRounds[_id].winner;
+        _prize = finishedRounds[_id].prize;
+    }
+
+
+    function getCountOfRewards() public view returns(uint256) {
+        return finishedRounds.length;
     }
 
 }

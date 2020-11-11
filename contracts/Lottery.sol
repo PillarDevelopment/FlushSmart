@@ -8,14 +8,8 @@ contract Lottery is RoundManager {
 
     address public immutable WETH;
 
-    struct Round {
-        address winner;
-        uint256 prize;
-        address[] players;
-        uint256[] rates;
-    }
-
-    Round[] internal finishedRounds;
+    address[] internal currentPlayers;
+    uint256[] internal currentRates;
 
     constructor (address _router, address _developers, address _WETH, PaperToken _paper, address _allocatorContract) public {
         router = _router; // 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D
@@ -84,15 +78,5 @@ contract Lottery is RoundManager {
         return winner;
     }
 
-
-    function getWinner(uint256 _id) public view returns(address _winner, uint256 _prize) {
-        _winner = finishedRounds[_id].winner;
-        _prize = finishedRounds[_id].prize;
-    }
-
-
-    function getCountOfRewards() public view returns(uint256) {
-        return finishedRounds.length;
-    }
 
 }
