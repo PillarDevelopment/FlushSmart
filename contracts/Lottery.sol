@@ -9,7 +9,7 @@ contract Lottery is RoundManager {
     address public immutable WETH;
 
     address[] internal currentPlayers;
-    uint256[] internal currentRates;
+    mapping(address => uint256) public addressRate;
 
     constructor (address _router, address _developers, address _WETH, PaperToken _paper, address _allocatorContract) public {
         router = _router; // 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D
@@ -39,9 +39,10 @@ contract Lottery is RoundManager {
 
         lastRate[_userAddress].rate = _swapWeTH;
         lastRate[_userAddress].round = getCountOfRewards();
+        addNewRate(msg.sender, _swapWeTH);
 
         if(roundBalance >= roundLimit) {
-            win(msg.sender);
+            win(checkPrize());
         }
     }
 
@@ -65,18 +66,48 @@ contract Lottery is RoundManager {
         winner.transfer(userReward);
         roundBalance = 0;
         finishedRounds.push(Round({winner: winner, prize: userReward}));
-
+        clearPlayers();
         emit EndRound(winner, burnPaper.add(allocatePaper));
         emit NewRound(roundLimit, paperReward);
     }
 
 
-    function checkRandom() internal returns(address) {
+    function checkPrize() internal returns(address) {
         address winner;
         uint256 chance = _randRange(1, 100);
 
         return winner;
     }
 
+    function getRateUserInfo(uint256 _id) public view returns(address player, uint256 rate) {
+        player = currentPlayers[_id];
+        rate = currentRates[_id];
+    }
+
+
+    function getPlayersLength() public view returns(uint256) {
+        return currentPlayers.length;
+    }
+
+
+    function addNewRate(address player, uint256 rate) internal {
+        // добавляем нового игрока и ставку
+        if (addressRate[player] == 0) {
+            currentPlayers.push(player);
+            addressRate[player] = rate;
+
+        }
+        else { //  добавляем ставку существующему
+            addressRate[player] = addressRate[player].add(rate);
+        }
+    }
+
+
+    function clearPlayers() internal {
+        for(uint256 i = 0; i < currentPlayers.length; i++) {
+            addressRate[currentPlayers[i]] = 0;
+        }
+        delete currentPlayers;
+    }
 
 }
