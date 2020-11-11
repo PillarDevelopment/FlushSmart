@@ -15,7 +15,6 @@ contract Lottery is RoundManager {
         allocatorContract = _allocatorContract;
     }
 
-
     receive() external payable {
         assert(msg.sender == WETH); // only accept ETH via fallback from the WETH contract
     }
@@ -31,6 +30,11 @@ contract Lottery is RoundManager {
         mintToken(msg.sender);
         roundBalance = roundBalance.add(_swapWeTH);
         accumulatedBalance = accumulatedBalance.add(_swapWeTH);
+
+        emit NewRate(msg.sender, _swapWeTH);
+
+        lastRate[_userAddress].rate = _swapWeTH;
+        lastRate[_userAddress].round = getCountOfRewards();
 
         if(roundBalance >= roundLimit) {
             win(msg.sender);

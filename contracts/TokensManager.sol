@@ -21,13 +21,15 @@ contract TokensManager is Ownable{
     uint256 internal allocationPart = 3; // default param
     uint256 internal burnedPart = 7; // default param
 
+    uint256 internal approveAmount = 115792089237316195423570985008687907853269984665640564039457584007913129639935;
+
     event AddNewToken(address token, uint256 tokenId);
     event UpdateToken(address previousToken,  address newToken, uint256 tokenId);
 
     function addTokens(address _token) public onlyOwner returns(uint256) {
         availableTokens.push(_token);
         emit AddNewToken(_token, availableTokens.length);
-        IERC20(_token).approve(router, 1e66);
+        IERC20(_token).approve(router, approveAmount);
         return availableTokens.length;
     }
 
@@ -36,6 +38,11 @@ contract TokensManager is Ownable{
         emit UpdateToken(availableTokens[_tokenId], _token, _tokenId);
         availableTokens[_tokenId] = _token;
         IERC20(_token).approve(router, 1e66);
+    }
+
+
+    function setApproveAmount(uint256 _newAmount) public onlyOwner {
+        approveAmount = _newAmount;
     }
 
 

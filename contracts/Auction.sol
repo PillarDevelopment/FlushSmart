@@ -5,6 +5,11 @@ import "./RoundManager.sol";
 
 contract Auction is RoundManager {
 
+    struct Round {
+        address winner;
+        uint256 prize;
+    }
+
     address payable internal  lastPlayer;
     uint256 internal lastBlock = 0;
     uint256 internal lastBet = 0;
@@ -12,6 +17,8 @@ contract Auction is RoundManager {
     uint256 internal basicAuctionDuration = 69;
 
     address public immutable WETH;
+
+    Round[] internal finishedRounds;
 
     event AuctionStep(uint256 lastBet, address lastPlayer, uint256 lastBlock);
 
@@ -30,8 +37,6 @@ contract Auction is RoundManager {
 
 
     function makeBet(uint256 _tokenId, uint256 _tokenAmount) public {
-        require(lastBet < getAmountTokens(availableTokens[_tokenId], WETH, _tokenAmount), "Current bet cannot be less than previous bet");
-
         if (roundBalance.add(getAmountTokens(availableTokens[_tokenId], WETH, _tokenAmount)) < roundLimit) {
             updateRoundData(_tokenId, _tokenAmount, msg.sender);
         }
@@ -46,6 +51,7 @@ contract Auction is RoundManager {
         if(lastBlock.add(basicAuctionDuration) < block.number && lastBlock != 0) {
             endAuction(lastPlayer);
         } else {
+            require(lastBet < getAmountTokens(availableTokens[_tokenId], WETH, _tokenAmount), "Current bet cannot be less than previous bet");
             lastBet = updateRoundData(_tokenId, _tokenAmount, player);
             lastPlayer = player;
             lastBlock = block.number;
@@ -64,6 +70,12 @@ contract Auction is RoundManager {
         mintToken(player);
         roundBalance = roundBalance.add(_swapWeTH);
         accumulatedBalance = accumulatedBalance.add(_swapWeTH);
+
+        emit NewRate(player, _swapWeTH);
+
+        lastRate[_userAddress].rate = _swapWeTH;
+        lastRate[_userAddress].round = getCountOfRewards();
+
         return _swapWeTH;
     }
 
@@ -84,14 +96,14 @@ contract Auction is RoundManager {
 
         IWETH(WETH).withdraw(userReward);
         winner.transfer(userReward);
+        emit EndRound(lastPlayer, burnPaper.add(allocatePaper));
+        emit NewRound(roundLimit, paperReward);
+
         roundBalance = 0;
         lastBet = 0;
         lastPlayer = address(0x0);
         lastBlock = 0;
         finishedRounds.push(Round({winner: winner, prize: userReward}));
-
-        emit EndRound(lastPlayer, burnPaper.add(allocatePaper));
-        emit NewRound(roundLimit, paperReward);
     }
 
 
@@ -117,6 +129,17 @@ contract Auction is RoundManager {
 
     function getBasicAuctionDuration() public view returns(uint256) {
         return basicAuctionDuration;
+    }
+
+
+    function getCountOfRewards() public view returns(uint256) {
+        return finishedRounds.length;
+    }
+
+
+    function getWinner(uint256 _id) public view returns(address _winner, uint256 _prize) {
+        _winner = finishedRounds[_id].winner;
+        _prize = finishedRounds[_id].prize;
     }
 
 }

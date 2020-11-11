@@ -9,14 +9,15 @@ contract RoundManager is TokensManager {
     uint256 internal roundBalance;
     uint256 internal accumulatedBalance;
 
-    struct Round {
-        address winner;
-        uint256 prize;
+    struct Rate {
+        uint256 rate;
+        uint256 round;
     }
 
-    Round[] internal finishedRounds;
+    mapping (address => Rate) public lastRate;
 
     event NewRound(uint256 limit, uint256 reward);
+    event NewRate(address _player, uint256 _rate);
     event EndRound(address winner, uint256 prize);
 
     function setRoundLimit(uint256 _newAmount) public onlyOwner {
@@ -40,18 +41,13 @@ contract RoundManager is TokensManager {
 
 
     function getAmountForRansom(uint256 _roundBalance, uint256 _part) public pure returns(uint256) {
-        return (_roundBalance.div(100)).mul(_part);
+        return (_roundBalance.mul(_part)).div(100);
     }
 
 
-    function getCountOfRewards() public view returns(uint256) {
-        return finishedRounds.length;
-    }
-
-
-    function getWinner(uint256 _id) public view returns(address _winner, uint256 _prize) {
-        _winner = finishedRounds[_id].winner;
-        _prize = finishedRounds[_id].prize;
+    function getLastBet(address _userAddress) public view returns(uint256 amount, uint256 roundId) {
+        amount = lastRate[_userAddress].rate;
+        roundId = lastRate[_userAddress].round;
     }
 
 }
