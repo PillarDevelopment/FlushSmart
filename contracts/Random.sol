@@ -18,7 +18,7 @@ contract Random {
     }
 
     function _randRange(uint256 min, uint256 max) internal returns (uint256) {
-        return uint256(keccak256(_rand())) % (max - min + 1) + min;
+        return uint256(keccak256(abi.encodePacked(_rand()))) % (max - min + 1) + min;
     }
 
     function _randChance(uint percent) internal returns (bool) {
