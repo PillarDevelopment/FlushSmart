@@ -56,19 +56,42 @@ contract Lottery is RoundManager, Random {
     }
 
 
-    function givePrize() internal {
+    function givePrize() public {
         uint256 prizeNumber = _randRange(0, roundLimit);
-
+        address payable winner;
         uint256 a = 0;
 
         for(uint256 i = 0; i < bets.length; i++) {
             uint256 bet = bets[i].bet;
-
+            if (bet >= a && bet <= prizeNumber) {
+                winner = payable(bets[i].player);
+                break;
+            }
+            a = a.add(bet);
         }
+        uint256 userReward = allocatePaper();
+
+        IWETH(WETH).withdraw(userReward);
+        winner.transfer(userReward);
+
+        finishedRounds.push(Round({winner: winner, prize: userReward}));
+        clearRound();
+        emit EndRound(winner, userReward);
+        emit NewRound(roundLimit, roundLimit);
+    }
 
 
 
-        address payable winner;
+    function clearRound() public {
+        for(uint256 i = 0; i < bets.length; i++) {
+            betsHistory[bets[i].player] = 0;
+        }
+        delete bets;
+        roundBalance = 0;
+    }
+
+
+    function allocatePaper() public returns(uint256) {
         uint256 amountToBurn = getAmountForRansom(roundBalance, burnedPart);
         uint256 amountToAllocation = getAmountForRansom(roundBalance, allocationPart);
 
@@ -81,23 +104,7 @@ contract Lottery is RoundManager, Random {
         uint256 burnPaper = swap(amountToBurn, WETH, address(paper), getAmountTokens(WETH, address(paper), amountToBurn), 0x0000000000000000000000000000000000000005);
         uint256 allocatePaper = swap(amountToAllocation, WETH, address(paper), getAmountTokens(WETH, address(paper), amountToAllocation), allocatorContract);
         uint256 userReward = roundBalance.sub(amountToBurn.add(amountToAllocation));
-
-        IWETH(WETH).withdraw(userReward);
-        winner.transfer(userReward);
-
-        finishedRounds.push(Round({winner: winner, prize: userReward}));
-        clearRound();
-        emit EndRound(winner, burnPaper.add(allocatePaper));
-        emit NewRound(roundLimit, paperReward);
-    }
-
-
-    function clearRound() internal {
-        for(uint256 i = 0; i < bets.length; i++) {
-            betsHistory[bets[i].player] = 0;
-        }
-        delete bets;
-        roundBalance = 0;
+        return userReward;
     }
 
 
