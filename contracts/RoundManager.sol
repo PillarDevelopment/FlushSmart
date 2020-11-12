@@ -2,6 +2,7 @@
 pragma solidity ^0.6.12;
 
 import "./TokensManager.sol";
+
 contract RoundManager is TokensManager {
 
     uint256 internal roundLimit = 3e18;
@@ -14,14 +15,13 @@ contract RoundManager is TokensManager {
         uint256 prize;
     }
 
-    struct Rate {
-        uint256 rate;
-        uint256 round;
+    struct Bet {
+        address player;
+        uint256 bet;
     }
 
     Round[] internal finishedRounds;
 
-    mapping (address => Rate) public lastRate;
 
     event NewRound(uint256 limit, uint256 reward);
     event NewRate(address _player, uint256 _rate);
@@ -52,10 +52,6 @@ contract RoundManager is TokensManager {
     }
 
 
-    function getLastBet(address _userAddress) public view returns(uint256 amount, uint256 roundId) {
-        amount = lastRate[_userAddress].rate;
-        roundId = lastRate[_userAddress].round;
-    }
 
     function getWinner(uint256 _id) public view returns(address _winner, uint256 _prize) {
         _winner = finishedRounds[_id].winner;

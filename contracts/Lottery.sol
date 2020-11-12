@@ -4,12 +4,14 @@ pragma solidity ^0.6.12;
 import "./RoundManager.sol";
 import "./Random.sol";
 
-contract Lottery is RoundManager {
+contract Lottery is RoundManager, Random {
 
     address public immutable WETH;
 
-    address[] internal currentPlayers;
-    mapping(address => uint256) public addressRate;
+    Bet[] public bets;
+
+    mapping(address => uint256) public betsHistory;
+
 
     constructor (address _router, address _developers, address _WETH, PaperToken _paper, address _allocatorContract) public {
         router = _router; // 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D
@@ -18,6 +20,7 @@ contract Lottery is RoundManager {
         paper = _paper; // 0x2cbef5b1356456a2830dfef6393daca2b3dfb7a5
         allocatorContract = _allocatorContract;
     }
+
 
     receive() external payable {
         assert(msg.sender == WETH); // only accept ETH via fallback from the WETH contract
@@ -32,23 +35,40 @@ contract Lottery is RoundManager {
                                 getAmountTokens(availableTokens[_tokenId], WETH, _tokenAmount),
                                 address(this));
         mintToken(msg.sender);
+
+        uint256 betAmount = _swapWeTH;
+        if (roundBalance.add(betAmount) > roundLimit) {
+            betAmount = roundLimit.sub(roundBalance);
+        }
+
         roundBalance = roundBalance.add(_swapWeTH);
         accumulatedBalance = accumulatedBalance.add(_swapWeTH);
 
         emit NewRate(msg.sender, _swapWeTH);
 
-        lastRate[_userAddress].rate = _swapWeTH;
-        lastRate[_userAddress].round = getCountOfRewards();
-        addNewRate(msg.sender, _swapWeTH);
+        betsHistory[msg.sender] = bets.length; // addNewRate(msg.sender, _swapWeTH);
+        bets.push(Bet({ player: msg.sender,
+        bet: betAmount}));
 
         if(roundBalance >= roundLimit) {
-            win(checkPrize());
+            givePrize();
         }
     }
 
 
-    function win(address payable winner) private {
+    function givePrize() internal {
+        uint256 prizeNumber = _randRange(0, roundLimit);
 
+        uint256 a = 0;
+
+        for(uint256 i = 0; i < bets.length; i++) {
+            uint256 bet = bets[i].bet;
+
+        }
+
+
+
+        address payable winner;
         uint256 amountToBurn = getAmountForRansom(roundBalance, burnedPart);
         uint256 amountToAllocation = getAmountForRansom(roundBalance, allocationPart);
 
@@ -64,50 +84,31 @@ contract Lottery is RoundManager {
 
         IWETH(WETH).withdraw(userReward);
         winner.transfer(userReward);
-        roundBalance = 0;
+
         finishedRounds.push(Round({winner: winner, prize: userReward}));
-        clearPlayers();
+        clearRound();
         emit EndRound(winner, burnPaper.add(allocatePaper));
         emit NewRound(roundLimit, paperReward);
     }
 
 
-    function checkPrize() internal returns(address) {
-        address winner;
-        uint256 chance = _randRange(1, 100);
-
-        return winner;
+    function clearRound() internal {
+        for(uint256 i = 0; i < bets.length; i++) {
+            betsHistory[bets[i].player] = 0;
+        }
+        delete bets;
+        roundBalance = 0;
     }
+
 
     function getRateUserInfo(uint256 _id) public view returns(address player, uint256 rate) {
-        player = currentPlayers[_id];
-        rate = currentRates[_id];
+        player = bets[_id].player;
+        rate = bets[_id].bet;
     }
 
 
-    function getPlayersLength() public view returns(uint256) {
-        return currentPlayers.length;
-    }
-
-
-    function addNewRate(address player, uint256 rate) internal {
-        // добавляем нового игрока и ставку
-        if (addressRate[player] == 0) {
-            currentPlayers.push(player);
-            addressRate[player] = rate;
-
-        }
-        else { //  добавляем ставку существующему
-            addressRate[player] = addressRate[player].add(rate);
-        }
-    }
-
-
-    function clearPlayers() internal {
-        for(uint256 i = 0; i < currentPlayers.length; i++) {
-            addressRate[currentPlayers[i]] = 0;
-        }
-        delete currentPlayers;
+    function getBetsLength() public view returns(uint256) {
+        return bets.length;
     }
 
 }
