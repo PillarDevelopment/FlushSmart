@@ -97,6 +97,7 @@ contract AllocatorContract is Ownable {
         for(uint i = 0; i<farmers.length; i++) {
             paperTotalBalance = paperTotalBalance.add(withdrawAmount[farmers[i]]);
         }
+        updatePool();
     }
 
 
