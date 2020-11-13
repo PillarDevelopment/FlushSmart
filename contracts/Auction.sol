@@ -5,7 +5,6 @@ import "./RoundManager.sol";
 
 contract Auction is RoundManager {
 
-
     address payable internal  lastPlayer;
     uint256 internal lastBlock = 0;
     uint256 internal lastBet = 0;

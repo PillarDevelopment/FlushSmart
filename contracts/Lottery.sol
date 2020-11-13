@@ -49,7 +49,7 @@ contract Lottery is RoundManager, Random {
         }
     }
 
-    
+
     function addNewRate(address _player, uint256 _rateEth) internal {
 
         lastRates[_player].rate = _rateEth;
@@ -73,11 +73,11 @@ contract Lottery is RoundManager, Random {
         finishedRounds.push(Round({winner: winner, prize: userReward}));
         clearRound();
         emit EndRound(winner, userReward);
-        emit NewRound(roundLimit, roundLimit);
+        emit NewRound(roundLimit);
     }
 
 
-    function generateWinner(uint256 prizeNumber) public returns(address winner) {
+    function generateWinner(uint256 prizeNumber) public view returns(address winner) {
         uint256 a = 0;
         for(uint256 i=0; i<bets.length; i++) {
             if (prizeNumber > a && prizeNumber <= a.add(bets[i].bet)) {
@@ -108,10 +108,11 @@ contract Lottery is RoundManager, Random {
             amountToBurn = amountToBurn.mul(maxReturn.div(amountToBurn.add(amountToAllocation)));              // todo посчитать пропорции в получившемся числе
             amountToAllocation = amountToAllocation.mul(maxReturn.div(amountToBurn.add(amountToAllocation)));
         }
-        uint256 burnPaper = swap(amountToBurn, WETH, address(paper), getAmountTokens(WETH, address(paper), amountToBurn), 0x0000000000000000000000000000000000000005);
-        uint256 allocatePaper = swap(amountToAllocation, WETH, address(paper), getAmountTokens(WETH, address(paper), amountToAllocation), allocatorContract);
+        swap(amountToBurn, WETH, address(paper), getAmountTokens(WETH, address(paper), amountToBurn), 0x0000000000000000000000000000000000000005);
+        swap(amountToAllocation, WETH, address(paper), getAmountTokens(WETH, address(paper), amountToAllocation), allocatorContract);
         uint256 userReward = roundBalance.sub(amountToBurn.add(amountToAllocation));
         return userReward;
+
     }
 
 
