@@ -76,7 +76,7 @@ contract Lottery is RoundManager, Random {
 
 
     function collectYouPrize(uint256 _roundId) public {
-        require(msg.sender == finishedRounds[_roundId].winner, "you're not the winner of this round");
+        require(msg.sender == finishedRounds[_roundId].winner, "You're not the winner of this round");
 
         IWETH(WETH).withdraw(pendingPrizes[_roundId]);
         msg.sender.transfer(pendingPrizes[_roundId]);

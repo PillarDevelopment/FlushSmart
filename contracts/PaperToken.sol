@@ -517,7 +517,7 @@ contract AdminContract is Ownable {
     event GovernanceContractRemoved(address addr);
 
     modifier onlyGovernance() {
-        require(governanceContracts[msg.sender]);
+        require(governanceContracts[msg.sender], "Isn't governance address");
         _;
     }
 

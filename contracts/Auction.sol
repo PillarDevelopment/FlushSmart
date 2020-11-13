@@ -39,7 +39,6 @@ contract Auction is RoundManager {
     }
 
 
-
     function betInAuction(uint256 _tokenId, uint256 _tokenAmount, address payable _player) public {
         if(lastBlock.add(basicAuctionDuration) < block.number && lastBlock != 0) {
             endAuction(lastPlayer);
@@ -95,11 +94,12 @@ contract Auction is RoundManager {
         lastPlayer = address(0x0);
         lastBlock = 0;
         finishedRounds.push(Round({winner: _winner, prize: _userReward}));
+        pendingPrizes[finishedRounds.length] = _userReward;
     }
 
 
     function collectYouPrize(uint256 _roundId) public {
-        require(msg.sender == finishedRounds[_roundId].winner, "you're not the winner of this round");
+        require(msg.sender == finishedRounds[_roundId].winner, "You're not the winner of this round");
 
         IWETH(WETH).withdraw(pendingPrizes[_roundId]);
         msg.sender.transfer(pendingPrizes[_roundId]);
