@@ -20,8 +20,13 @@ contract RoundManager is TokensManager {
         uint256 bet;
     }
 
-    Round[] internal finishedRounds;
+    struct LastRate {
+        uint256 rate;
+        uint256 round;
+    }
 
+    Round[] internal finishedRounds;
+    mapping(address => LastRate) internal lastRates;
 
     event NewRound(uint256 limit, uint256 reward);
     event NewRate(address _player, uint256 _rate);
@@ -52,10 +57,9 @@ contract RoundManager is TokensManager {
     }
 
 
-
-    function getWinner(uint256 _id) public view returns(address _winner, uint256 _prize) {
-        _winner = finishedRounds[_id].winner;
-        _prize = finishedRounds[_id].prize;
+    function getWinner(uint256 _roundId) public view returns(address _winner, uint256 _prize) {
+        _winner = finishedRounds[_roundId].winner;
+        _prize = finishedRounds[_roundId].prize;
     }
 
 
@@ -63,4 +67,9 @@ contract RoundManager is TokensManager {
         return finishedRounds.length;
     }
 
+
+    function getLastBet(address _player) public view returns(uint256 amount, uint256 round) {
+        amount = lastRates[_player].rate;
+        round = lastRates[_player].round;
+    }
 }

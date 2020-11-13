@@ -41,55 +41,55 @@ contract Auction is RoundManager {
 
 
 
-    function betInAuction(uint256 _tokenId, uint256 _tokenAmount, address payable player) public {
+    function betInAuction(uint256 _tokenId, uint256 _tokenAmount, address payable _player) public {
         if(lastBlock.add(basicAuctionDuration) < block.number && lastBlock != 0) {
             endAuction(lastPlayer);
         } else {
             require(lastBet < getAmountTokens(availableTokens[_tokenId], WETH, _tokenAmount), "Current bet cannot be less than previous bet");
-            lastBet = updateRoundData(_tokenId, _tokenAmount, player);
-            lastPlayer = player;
+            lastBet = updateRoundData(_tokenId, _tokenAmount, _player);
+            lastPlayer = _player;
             lastBlock = block.number;
             emit AuctionStep(lastBet, lastPlayer, lastBlock);
         }
     }
 
 
-    function updateRoundData(uint256 _tokenId, uint256 _tokenAmount, address player) internal returns(uint256) {
+    function updateRoundData(uint256 _tokenId, uint256 _tokenAmount, address _player) internal returns(uint256) {
         transferTokens(_tokenId, _tokenAmount);
         uint256 _swapWeTH = swap(_tokenAmount,
                                 availableTokens[_tokenId],
                                 WETH,
                                 getAmountTokens(availableTokens[_tokenId], WETH, _tokenAmount),
                                 address(this));
-        mintToken(player);
+        mintToken(_player);
         roundBalance = roundBalance.add(_swapWeTH);
         accumulatedBalance = accumulatedBalance.add(_swapWeTH);
 
-        emit NewRate(player, _swapWeTH);
+        emit NewRate(_player, _swapWeTH);
 
-        lastRate[_userAddress].rate = _swapWeTH;
-        lastRate[_userAddress].round = getCountOfRewards();
+        lastRates[_player].rate = _swapWeTH;
+        lastRates[_player].round = getCountOfRewards();
 
         return _swapWeTH;
     }
 
 
-    function endAuction(address payable winner) internal {
+    function endAuction(address payable _winner) internal {
         uint256 amountToBurn = getAmountForRansom(roundBalance, burnedPart);
         uint256 amountToAllocation = getAmountForRansom(roundBalance, allocationPart);
 
         uint256 maxReturn = getAmountTokens(WETH, address(paper), amountToBurn.add(amountToAllocation));
 
         if (maxReturn < amountToBurn.add(amountToAllocation)) {
-            amountToBurn = amountToBurn.mul(maxReturn.div(amountToBurn.add(amountToAllocation)));              // todo посчитать пропорции в получившемся числе
+            amountToBurn = amountToBurn.mul(maxReturn.div(amountToBurn.add(amountToAllocation)));
             amountToAllocation = amountToAllocation.mul(maxReturn.div(amountToBurn.add(amountToAllocation)));
         }
         uint256 burnPaper = swap(amountToBurn, WETH, address(paper), getAmountTokens(WETH, address(paper), amountToBurn), 0x0000000000000000000000000000000000000005);
         uint256 allocatePaper = swap(amountToAllocation, WETH, address(paper), getAmountTokens(WETH, address(paper), amountToAllocation), allocatorContract);
-        uint256 userReward = roundBalance.sub(amountToBurn.add(amountToAllocation));
+        uint256 _userReward = roundBalance.sub(amountToBurn.add(amountToAllocation));
 
-        IWETH(WETH).withdraw(userReward);
-        winner.transfer(userReward);
+        IWETH(WETH).withdraw(_userReward);
+        _winner.transfer(_userReward);
         emit EndRound(lastPlayer, burnPaper.add(allocatePaper));
         emit NewRound(roundLimit, paperReward);
 
@@ -97,7 +97,7 @@ contract Auction is RoundManager {
         lastBet = 0;
         lastPlayer = address(0x0);
         lastBlock = 0;
-        finishedRounds.push(Round({winner: winner, prize: userReward}));
+        finishedRounds.push(Round({winner: _winner, prize: _userReward}));
     }
 
 

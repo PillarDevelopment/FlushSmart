@@ -9,7 +9,6 @@ contract Lottery is RoundManager, Random {
     address public immutable WETH;
 
     Bet[] public bets;
-
     mapping(address => uint256) public betsHistory;
 
 
@@ -43,32 +42,29 @@ contract Lottery is RoundManager, Random {
 
         roundBalance = roundBalance.add(_swapWeTH);
         accumulatedBalance = accumulatedBalance.add(_swapWeTH);
-
-        emit NewRate(msg.sender, _swapWeTH);
-
-        betsHistory[msg.sender] = bets.length; // addNewRate(msg.sender, _swapWeTH);
-        bets.push(Bet({ player: msg.sender,
-        bet: betAmount}));
+        addNewRate(msg.sender, betAmount);
 
         if(roundBalance >= roundLimit) {
             givePrize();
         }
     }
 
+    
+    function addNewRate(address _player, uint256 _rateEth) internal {
+
+        lastRates[_player].rate = _rateEth;
+        lastRates[_player].round = getCountOfRewards();
+        betsHistory[msg.sender] = bets.length;
+        bets.push(Bet({ player: _player,
+                        bet: _rateEth}));
+        emit NewRate(msg.sender, _rateEth);
+    }
+
 
     function givePrize() public {
         uint256 prizeNumber = _randRange(0, roundLimit);
-        address payable winner;
-        uint256 a = 0;
+        address payable winner = payable(generateWinner(prizeNumber));
 
-        for(uint256 i = 0; i < bets.length; i++) {
-            uint256 bet = bets[i].bet;
-            if (bet >= a && bet <= prizeNumber) {
-                winner = payable(bets[i].player);
-                break;
-            }
-            a = a.add(bet);
-        }
         uint256 userReward = allocatePaper();
 
         IWETH(WETH).withdraw(userReward);
@@ -80,6 +76,17 @@ contract Lottery is RoundManager, Random {
         emit NewRound(roundLimit, roundLimit);
     }
 
+
+    function generateWinner(uint256 prizeNumber) public returns(address winner) {
+        uint256 a = 0;
+        for(uint256 i=0; i<bets.length; i++) {
+            if (prizeNumber > a && prizeNumber <= a.add(bets[i].bet)) {
+                winner = bets[i].player;
+                break;
+            }
+            a = a.add(bets[i].bet);
+        }
+    }
 
 
     function clearRound() public {
@@ -108,9 +115,9 @@ contract Lottery is RoundManager, Random {
     }
 
 
-    function getRateUserInfo(uint256 _id) public view returns(address player, uint256 rate) {
-        player = bets[_id].player;
-        rate = bets[_id].bet;
+    function getRateUserInfo(uint256 _userid) public view returns(address player, uint256 rate) {
+        player = bets[_userid].player;
+        rate = bets[_userid].bet;
     }
 
 
