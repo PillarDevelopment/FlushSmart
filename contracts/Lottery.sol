@@ -69,7 +69,8 @@ contract Lottery is RoundManager, Random {
 
         finishedRounds.push(Round({winner: winner, prize: userReward}));
         clearRound();
-        emit EndRound(winner, userReward);
+        pendingPrizes[finishedRounds.length] = userReward;
+        emit EndRound(winner, prizeNumber);
         emit NewRound(roundLimit, paperReward);
     }
 
@@ -81,6 +82,7 @@ contract Lottery is RoundManager, Random {
         msg.sender.transfer(pendingPrizes[_roundId]);
         pendingPrizes[_roundId] = 0;
     }
+
 
     function generateWinner(uint256 prizeNumber) public view returns(address winner) {
         uint256 a = 0;
