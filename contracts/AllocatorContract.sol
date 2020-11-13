@@ -62,8 +62,8 @@ contract AllocatorContract is Ownable {
     event Harvest(address indexed user, uint256 amount);
 
     constructor(PaperToken _paper, IERC20 _paperLpToken) public {
-        paper = _paper;
-        paperWethLP = _paperLpToken;
+        paper = _paper; // 0x2cbef5b1356456a2830dfef6393daca2b3dfb7a5
+        paperWethLP = _paperLpToken; // 0xF6386A331C271f8951b160c4fA550d059e111582
     }
 
 
