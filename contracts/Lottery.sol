@@ -61,7 +61,7 @@ contract Lottery is RoundManager, Random {
     }
 
 
-    function givePrize() public {
+    function givePrize() internal {
         uint256 prizeNumber = _randRange(0, roundLimit);
         address payable winner = payable(generateWinner(prizeNumber));
 
@@ -89,7 +89,7 @@ contract Lottery is RoundManager, Random {
     }
 
 
-    function clearRound() public {
+    function clearRound() internal {
         for(uint256 i = 0; i < bets.length; i++) {
             betsHistory[bets[i].player] = 0;
         }
@@ -98,7 +98,7 @@ contract Lottery is RoundManager, Random {
     }
 
 
-    function allocatePaper() public returns(uint256) {
+    function allocatePaper() internal returns(uint256) {
         uint256 amountToBurn = getAmountForRansom(roundBalance, burnedPart);
         uint256 amountToAllocation = getAmountForRansom(roundBalance, allocationPart);
 
