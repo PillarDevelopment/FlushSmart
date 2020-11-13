@@ -27,8 +27,9 @@ contract RoundManager is TokensManager {
 
     Round[] internal finishedRounds;
     mapping(address => LastRate) internal lastRates;
+    mapping(uint256 => uint256) public pendingPrizes;
 
-    event NewRound(uint256 limit);
+    event NewRound(uint256 limit, uint256 paperReward);
     event NewRate(address player, uint256 rate);
     event EndRound(address winner, uint256 prize);
 
@@ -72,5 +73,4 @@ contract RoundManager is TokensManager {
         amount = lastRates[_player].rate;
         round = lastRates[_player].round;
     }
-
 }
