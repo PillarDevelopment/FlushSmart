@@ -50,90 +50,81 @@ contract AllocatorContract is Ownable {
     IERC20 public paperWethLP;
     PaperToken public paper;
 
-    mapping (address => uint256) private userPart; // Paper/Weth
-    mapping (address => uint256) private pendingAmount; // Paper
-    mapping (address => uint256) private withdrawAmount; // Paper
+    struct Farmer {
+        uint256 userPart;
+        uint256 pendingAmount;
+        uint256 withdrawAmount;
+    }
 
-    uint256 public paperTotalBalance;
+    mapping (address => Farmer) public users;
 
-    address [] private farmers;
+    uint256 public debt;
+    uint256 public totalLP;
 
     event Deposit(address indexed user, uint256 amount);
     event Harvest(address indexed user, uint256 amount);
 
+
     constructor(PaperToken _paper, IERC20 _paperLpToken) public {
-        paper = _paper; // 0x2cbef5b1356456a2830dfef6393daca2b3dfb7a5
-        paperWethLP = _paperLpToken; // 0xF6386A331C271f8951b160c4fA550d059e111582
+        paper = _paper;
+        paperWethLP = _paperLpToken;
     }
 
 
-    function deposit(uint256 _amount) public {
+    function depositV2(uint256 _amount) public {
         paperWethLP.safeTransferFrom(address(msg.sender), address(this), _amount);
+        uint256 p = users[msg.sender].userPart / totalLP * (paper.balanceOf(address(this)) + debt);
 
-        if(userPart[msg.sender] == 0) {
-            farmers.push(msg.sender);
+        if (p > users[msg.sender].withdrawAmount) {
+            users[msg.sender].pendingAmount = p - users[msg.sender].withdrawAmount;
+
+            paperWethLP.safeTransferFrom(address(msg.sender), address(this), _amount);
+
+
+            paper.transfer(msg.sender, users[msg.sender].pendingAmount);
+
+            debt += users[msg.sender].pendingAmount;
+            users[msg.sender].withdrawAmount = p;
+
         }
-        userPart[msg.sender] = userPart[msg.sender].add(_amount);
-        updatePaperTotalBalance();
-        updatePool();
-        emit Deposit(msg.sender, _amount);
+        debt = (paper.balanceOf(address(this)) + debt)*(totalLP + _amount)/totalLP - paper.balanceOf(address(this));
+        totalLP = totalLP + _amount;
+        users[msg.sender].withdrawAmount = users[msg.sender].userPart / totalLP * (paper.balanceOf(address(this)) + debt);
     }
 
 
-    function updatePool() public {
-        for(uint i = 0; i<farmers.length; i++) {
-            pendingAmount[farmers[i]] = (((userPart[farmers[i]].mul(100)).div(paperWethLP.balanceOf(address(this)))).mul(paperTotalBalance)).div(100);
 
-            if (pendingAmount[farmers[i]] <= withdrawAmount[farmers[i]]) {
-                pendingAmount[farmers[i]] = 0;
-            } else
-                pendingAmount[farmers[i]] = pendingAmount[farmers[i]].sub(withdrawAmount[farmers[i]]);
+
+    function harvest(uint256 _amount) public {
+        //   require(paper.totalSupply() == paper.maxSupply);  // todo WTF
+
+        uint256 p = users[msg.sender].userPart / totalLP * (paper.balanceOf(address(this)) + debt);
+
+        if (p > users[msg.sender].withdrawAmount) {
+            users[msg.sender].pendingAmount = p - users[msg.sender].withdrawAmount;
+            paperWethLP.safeTransferFrom(address(this), address(msg.sender), users[msg.sender].pendingAmount);
+            debt += users[msg.sender].pendingAmount;
+            users[msg.sender].withdrawAmount = p;
         }
-    }
 
-
-    function updatePaperTotalBalance() public {
-        paperTotalBalance = paper.balanceOf(address(this));
-        for(uint i = 0; i<farmers.length; i++) {
-            paperTotalBalance = paperTotalBalance.add(withdrawAmount[farmers[i]]);
-        }
-        updatePool();
-    }
-
-
-    function harvest() public {
-        updatePool();
-        require(pendingAmount[msg.sender] > withdrawAmount[msg.sender], "Insufficient pending amount, please, deposit");
-        uint256 paperReward = pendingAmount[msg.sender].sub(withdrawAmount[msg.sender]);
-        paper.transfer(msg.sender, paperReward);
-        withdrawAmount[msg.sender] = withdrawAmount[msg.sender].add(paperReward);
-        updatePaperTotalBalance();
-        emit Harvest(msg.sender, paperReward);
-    }
-
-
-    function safePaperTransfer(address _to, uint256 _amount) internal {
-        uint256 paperBal = paper.balanceOf(address(this));
-        if (_amount > paperBal) {
-            paper.transfer(_to, paperBal);
-        } else {
-            paper.transfer(_to, _amount);
-        }
+        debt = (paper.balanceOf(address(this)) + debt)*(totalLP - _amount)/totalLP - paper.balanceOf(address(this));
+        totalLP = totalLP - _amount;
+        users[msg.sender].withdrawAmount = users[msg.sender].userPart / totalLP * (paper.balanceOf(address(this)) + debt);
     }
 
 
     function getWithdrawAmount(address _user) public view returns(uint256) {
-        return withdrawAmount[_user];
+        return users[_user].withdrawAmount;
     }
 
 
     function getPendingAmount(address _user) public view returns(uint256) {
-        return pendingAmount[_user];
+        return users[_user].pendingAmount;
     }
 
 
     function getUserPartAmount(address _user) public view returns(uint256) {
-        return userPart[_user];
+        return users[_user].userPart;
     }
 
 
@@ -142,13 +133,11 @@ contract AllocatorContract is Ownable {
     }
 
 
-    function getFarmersCount() public view returns(uint256) {
-        return farmers.length;
-    }
 
-
-    function getFarmerAddress(uint256 _farmerId) public view returns(address) {
-        return farmers[_farmerId];
+    function getUser(address _user) public view returns(uint256 part, uint256 pemding, uint256 withdraw) {
+        part = users[_user].userPart;
+        pemding = users[_user].pendingAmount;
+        withdraw = users[_user].withdrawAmount;
     }
 
 }
