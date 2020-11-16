@@ -43,6 +43,7 @@ library SafeERC20 {
 
 }
 
+
 contract AllocatorContract is Ownable {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
@@ -71,24 +72,26 @@ contract AllocatorContract is Ownable {
     }
 
 
-    function depositV2(uint256 _amount) public {
-        paperWethLP.safeTransferFrom(address(msg.sender), address(this), _amount);
-        uint256 p = users[msg.sender].userPart / totalLP * (paper.balanceOf(address(this)) + debt);
+    function deposit(uint256 _amount) public {
+        // paperWethLP.safeTransferFrom(address(msg.sender), address(this), _amount);
 
+        if (users[msg.sender].userPart == 0) {
+            users[msg.sender].userPart = _amount;
+            users[msg.sender].pendingAmount = _amount;
+            users[msg.sender].withdrawAmount = 0;
+        }
+
+        totalLP = totalLP + _amount;
+        uint256 p = (users[msg.sender].userPart * (paper.balanceOf(address(this)) + debt)) / totalLP;
         if (p > users[msg.sender].withdrawAmount) {
             users[msg.sender].pendingAmount = p - users[msg.sender].withdrawAmount;
 
-            paperWethLP.safeTransferFrom(address(msg.sender), address(this), _amount);
-
-
             paper.transfer(msg.sender, users[msg.sender].pendingAmount);
 
-            debt += users[msg.sender].pendingAmount;
+            debt = debt + users[msg.sender].pendingAmount;
             users[msg.sender].withdrawAmount = p;
-
         }
         debt = (paper.balanceOf(address(this)) + debt)*(totalLP + _amount)/totalLP - paper.balanceOf(address(this));
-        totalLP = totalLP + _amount;
         users[msg.sender].withdrawAmount = users[msg.sender].userPart / totalLP * (paper.balanceOf(address(this)) + debt);
     }
 
@@ -102,7 +105,7 @@ contract AllocatorContract is Ownable {
 
         if (p > users[msg.sender].withdrawAmount) {
             users[msg.sender].pendingAmount = p - users[msg.sender].withdrawAmount;
-            paperWethLP.safeTransferFrom(address(this), address(msg.sender), users[msg.sender].pendingAmount);
+            //paperWethLP.safeTransferFrom(address(this), address(msg.sender), users[msg.sender].pendingAmount);
             debt += users[msg.sender].pendingAmount;
             users[msg.sender].withdrawAmount = p;
         }
