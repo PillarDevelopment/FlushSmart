@@ -73,7 +73,7 @@ contract AllocatorContract is Ownable {
 
 
     function deposit(uint256 _amount) public {
-        // paperWethLP.safeTransferFrom(address(msg.sender), address(this), _amount);
+        paperWethLP.safeTransferFrom(address(msg.sender), address(this), _amount);
 
         if (users[msg.sender].userPart == 0) {
             users[msg.sender].userPart = _amount;
@@ -99,13 +99,13 @@ contract AllocatorContract is Ownable {
 
 
     function harvest(uint256 _amount) public {
-        //   require(paper.totalSupply() == paper.maxSupply);  // todo WTF
+        require(paper.totalSupply() == paper.maxSupply());  // todo WTF
 
         uint256 p = users[msg.sender].userPart / totalLP * (paper.balanceOf(address(this)) + debt);
 
         if (p > users[msg.sender].withdrawAmount) {
             users[msg.sender].pendingAmount = p - users[msg.sender].withdrawAmount;
-            //paperWethLP.safeTransferFrom(address(this), address(msg.sender), users[msg.sender].pendingAmount);
+            paperWethLP.safeTransferFrom(address(this), address(msg.sender), users[msg.sender].pendingAmount);
             debt += users[msg.sender].pendingAmount;
             users[msg.sender].withdrawAmount = p;
         }

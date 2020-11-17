@@ -538,13 +538,19 @@ contract AdminContract is Ownable {
     }
 }
 
+
 contract PaperToken is ERC20("Paper", "Paper"), AdminContract {
 
-    uint256 public maxSupply = 69000*1e18;
+    uint256 private maxSupplyPaper = 69000*1e18;
 
     function mintPaper(address _to, uint256 _amount) public onlyGovernance virtual returns (bool) {
-        require(totalSupply().add(_amount) <= maxSupply, "Emission limit exceeded");
+        require(totalSupply().add(_amount) <= maxSupplyPaper, "Emission limit exceeded");
         _mint(_to, _amount);
         return true;
+    }
+
+
+    function maxSupply() public view returns(uint256) {
+        return maxSupplyPaper;
     }
 }
