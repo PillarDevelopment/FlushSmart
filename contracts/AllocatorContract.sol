@@ -94,7 +94,7 @@ contract AllocatorContract is Ownable {
 
 
     function harvest(uint256 _amount) public {
-        require(paper.totalSupply() == paper.maxSupply());  // todo WTF
+        require(paper.totalSupply() < paper.maxSupply(), "Farming was stopped");
 
         uint256 p = users[msg.sender].amount / totalLP * (paper.balanceOf(address(this)) + debt);
 
@@ -110,6 +110,12 @@ contract AllocatorContract is Ownable {
         users[msg.sender].loss = users[msg.sender].amount / totalLP * (paper.balanceOf(address(this)) + debt);
     }
 
+
+    function emergencyWithdraw() public {
+        require(paper.totalSupply() == paper.maxSupply(), "This option is not available, please, continue to farming");
+        paperWethLP.safeTransferFrom(address(this), address(msg.sender), users[msg.sender].amount);
+        users[msg.sender].amount = 0;
+    }
 
     function getWithdrawAmount(address _user) public view returns(uint256) {
         return  users[_user].amount / totalLP * (paper.balanceOf(address(this)) + debt);
