@@ -63,7 +63,7 @@ contract Auction is RoundManager {
         roundBalance = roundBalance.add(_swapWeTH);
         accumulatedBalance = accumulatedBalance.add(_swapWeTH);
 
-        emit NewRate(_player, _swapWeTH);
+        emit NewBet(_player, _swapWeTH);
 
         lastRates[_player].rate = _swapWeTH;
         lastRates[_player].round = getCountOfRewards();

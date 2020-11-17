@@ -57,7 +57,7 @@ contract Lottery is RoundManager, Random {
         betsHistory[msg.sender] = bets.length;
         bets.push(Bet({ player: _player,
                         bet: _rateEth}));
-        emit NewRate(msg.sender, _rateEth);
+        emit NewBet(msg.sender, _rateEth);
     }
 
 

@@ -30,7 +30,7 @@ contract RoundManager is TokensManager {
     mapping(uint256 => uint256) public pendingPrizes;
 
     event NewRound(uint256 limit, uint256 paperReward);
-    event NewRate(address player, uint256 rate);
+    event NewBet(address player, uint256 rate);
     event EndRound(address winner, uint256 prize);
 
     function setRoundLimit(uint256 _newAmount) public onlyOwner {
