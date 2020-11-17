@@ -39,7 +39,7 @@ contract Auction is RoundManager {
     }
 
 
-    function betInAuction(uint256 _tokenId, uint256 _tokenAmount, address payable _player) public {
+    function betInAuction(uint256 _tokenId, uint256 _tokenAmount, address payable _player) internal {
         if(lastBlock.add(basicAuctionDuration) < block.number && lastBlock != 0) {
             endAuction(lastPlayer);
         } else {
@@ -86,6 +86,9 @@ contract Auction is RoundManager {
         uint256 allocatePaper = swap(amountToAllocation, WETH, address(paper), getAmountTokens(WETH, address(paper), amountToAllocation), allocatorContract);
         uint256 _userReward = roundBalance.sub(amountToBurn.add(amountToAllocation));
 
+        IWETH(WETH).withdraw(_userReward);
+        _winner.transfer(_userReward);
+
         emit EndRound(lastPlayer, burnPaper.add(allocatePaper));
         emit NewRound(roundLimit, paperReward);
 
@@ -94,16 +97,6 @@ contract Auction is RoundManager {
         lastPlayer = address(0x0);
         lastBlock = 0;
         finishedRounds.push(Round({winner: _winner, prize: _userReward}));
-        pendingPrizes[finishedRounds.length] = _userReward;
-    }
-
-
-    function collectYouPrize(uint256 _roundId) public {
-        require(msg.sender == finishedRounds[_roundId].winner, "You're not the winner of this round");
-
-        IWETH(WETH).withdraw(pendingPrizes[_roundId]);
-        msg.sender.transfer(pendingPrizes[_roundId]);
-        pendingPrizes[_roundId] = 0;
     }
 
 

@@ -67,24 +67,17 @@ contract Lottery is RoundManager, Random {
 
         uint256 userReward = allocatePaper();
 
+        IWETH(WETH).withdraw(userReward);
+        msg.sender.transfer(userReward);
+
         finishedRounds.push(Round({winner: winner, prize: userReward}));
         clearRound();
-        pendingPrizes[finishedRounds.length] = userReward;
         emit EndRound(winner, prizeNumber);
         emit NewRound(roundLimit, paperReward);
     }
 
 
-    function collectYouPrize(uint256 _roundId) public {
-        require(msg.sender == finishedRounds[_roundId].winner, "You're not the winner of this round");
-
-        IWETH(WETH).withdraw(pendingPrizes[_roundId]);
-        msg.sender.transfer(pendingPrizes[_roundId]);
-        pendingPrizes[_roundId] = 0;
-    }
-
-
-    function generateWinner(uint256 prizeNumber) public view returns(address winner) {
+    function generateWinner(uint256 prizeNumber) internal view returns(address winner) {
         uint256 a = 0;
         for(uint256 i=0; i<bets.length; i++) {
             if (prizeNumber > a && prizeNumber <= a.add(bets[i].bet)) {
