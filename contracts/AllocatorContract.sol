@@ -74,48 +74,43 @@ contract AllocatorContract is Ownable {
 
     function deposit(uint256 _amount) public {
         paperWethLP.safeTransferFrom(address(msg.sender), address(this), _amount);
-
-        totalLP = totalLP + _amount;
-        users[msg.sender].amount = users[msg.sender].amount + _amount;
-
-        uint256 p = (users[msg.sender].amount * (paper.balanceOf(address(this)) + debt)) / totalLP;
+        totalLP = totalLP.add(_amount);
+        users[msg.sender].amount = users[msg.sender].amount.add(_amount);
+        uint256 p = (users[msg.sender].amount.mul((paper.balanceOf(address(this)).add(debt)))).div(totalLP);
 
         if (p > users[msg.sender].loss) {
-            users[msg.sender].pending = p - users[msg.sender].loss;
-
+            users[msg.sender].pending = p.sub(users[msg.sender].loss);
             paper.transfer(msg.sender, users[msg.sender].pending);
-
-            debt = debt + users[msg.sender].pending;
+            debt = debt.add(users[msg.sender].pending);
             users[msg.sender].loss = p;
         }
-        debt = (paper.balanceOf(address(this)) + debt)*(totalLP + _amount)/totalLP - paper.balanceOf(address(this));
-        users[msg.sender].loss = users[msg.sender].amount / totalLP * (paper.balanceOf(address(this)) + debt);
+        debt = ((paper.balanceOf(address(this)).add(debt)).mul(totalLP.add(_amount))).div(totalLP).sub(paper.balanceOf(address(this)));
+        users[msg.sender].loss = (users[msg.sender].amount.mul((paper.balanceOf(address(this)).add(debt)))).div(totalLP);
     }
 
 
     function harvest(uint256 _amount) public {
         require(paper.totalSupply() < paper.maxSupply(), "Farming was stopped");
-
-        uint256 p = users[msg.sender].amount / totalLP * (paper.balanceOf(address(this)) + debt);
+        uint256 p = (users[msg.sender].amount.mul((paper.balanceOf(address(this)).add(debt)))).div(totalLP);
 
         if (p > users[msg.sender].loss) {
-            users[msg.sender].pending = p - users[msg.sender].loss;
+            users[msg.sender].pending = p.sub(users[msg.sender].loss);
             paperWethLP.safeTransferFrom(address(this), address(msg.sender), users[msg.sender].pending);
-            debt += users[msg.sender].pending;
+            debt = debt.add(users[msg.sender].pending);
             users[msg.sender].loss = p;
         }
-
-        debt = (paper.balanceOf(address(this)) + debt)*(totalLP - _amount)/totalLP - paper.balanceOf(address(this));
-        totalLP = totalLP - _amount;
-        users[msg.sender].loss = users[msg.sender].amount / totalLP * (paper.balanceOf(address(this)) + debt);
+        debt = ((paper.balanceOf(address(this)).add(debt)).mul(totalLP.sub(_amount))).div(totalLP).sub(paper.balanceOf(address(this)));
+        totalLP = totalLP.sub(_amount);
+        users[msg.sender].loss = (users[msg.sender].amount.mul((paper.balanceOf(address(this)).add(debt)))).div(totalLP);
     }
 
-
+    
     function emergencyWithdraw() public {
         require(paper.totalSupply() == paper.maxSupply(), "This option is not available, please, continue to farming");
         paperWethLP.safeTransferFrom(address(this), address(msg.sender), users[msg.sender].amount);
         users[msg.sender].amount = 0;
     }
+
 
     function getWithdrawAmount(address _user) public view returns(uint256) {
         return  users[_user].amount / totalLP * (paper.balanceOf(address(this)) + debt);
@@ -132,7 +127,7 @@ contract AllocatorContract is Ownable {
     }
 
 
-    function getUserPartAmount(address _user) public view returns(uint256) {
+    function getUserAmount(address _user) public view returns(uint256) {
         return users[_user].amount;
     }
 
