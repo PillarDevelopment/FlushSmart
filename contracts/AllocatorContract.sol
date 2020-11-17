@@ -52,9 +52,9 @@ contract AllocatorContract is Ownable {
     PaperToken public paper;
 
     struct Farmer {
-        uint256 lp;
+        uint256 amount;
         uint256 pending;
-        uint256 lost;
+        uint256 loss;
     }
 
     mapping (address => Farmer) public users;
@@ -76,58 +76,58 @@ contract AllocatorContract is Ownable {
         paperWethLP.safeTransferFrom(address(msg.sender), address(this), _amount);
 
         totalLP = totalLP + _amount;
-        users[msg.sender].lp = users[msg.sender].lp + _amount;
+        users[msg.sender].amount = users[msg.sender].amount + _amount;
 
-        uint256 p = (users[msg.sender].lp * (paper.balanceOf(address(this)) + debt)) / totalLP;
+        uint256 p = (users[msg.sender].amount * (paper.balanceOf(address(this)) + debt)) / totalLP;
 
-        if (p > users[msg.sender].lost) {
-            users[msg.sender].pending = p - users[msg.sender].lost;
+        if (p > users[msg.sender].loss) {
+            users[msg.sender].pending = p - users[msg.sender].loss;
 
             paper.transfer(msg.sender, users[msg.sender].pending);
 
             debt = debt + users[msg.sender].pending;
-            users[msg.sender].lost = p;
+            users[msg.sender].loss = p;
         }
         debt = (paper.balanceOf(address(this)) + debt)*(totalLP + _amount)/totalLP - paper.balanceOf(address(this));
-        users[msg.sender].lost = users[msg.sender].lp / totalLP * (paper.balanceOf(address(this)) + debt);
+        users[msg.sender].loss = users[msg.sender].amount / totalLP * (paper.balanceOf(address(this)) + debt);
     }
 
 
     function harvest(uint256 _amount) public {
         require(paper.totalSupply() == paper.maxSupply());  // todo WTF
 
-        uint256 p = users[msg.sender].lp / totalLP * (paper.balanceOf(address(this)) + debt);
+        uint256 p = users[msg.sender].amount / totalLP * (paper.balanceOf(address(this)) + debt);
 
-        if (p > users[msg.sender].lost) {
-            users[msg.sender].pending = p - users[msg.sender].lost;
+        if (p > users[msg.sender].loss) {
+            users[msg.sender].pending = p - users[msg.sender].loss;
             paperWethLP.safeTransferFrom(address(this), address(msg.sender), users[msg.sender].pending);
             debt += users[msg.sender].pending;
-            users[msg.sender].lost = p;
+            users[msg.sender].loss = p;
         }
 
         debt = (paper.balanceOf(address(this)) + debt)*(totalLP - _amount)/totalLP - paper.balanceOf(address(this));
         totalLP = totalLP - _amount;
-        users[msg.sender].lost = users[msg.sender].lp / totalLP * (paper.balanceOf(address(this)) + debt);
+        users[msg.sender].loss = users[msg.sender].amount / totalLP * (paper.balanceOf(address(this)) + debt);
     }
 
 
     function getWithdrawAmount(address _user) public view returns(uint256) {
-        return  users[_user].lp / totalLP * (paper.balanceOf(address(this)) + debt);
+        return  users[_user].amount / totalLP * (paper.balanceOf(address(this)) + debt);
     }
 
 
     function getPendingAmount(address _user) public view returns(uint256) {
-        uint256 p = (users[_user].lp * (paper.balanceOf(address(this)) + debt)) / totalLP;
+        uint256 p = (users[_user].amount * (paper.balanceOf(address(this)) + debt)) / totalLP;
 
-        if (p > users[_user].lost) {
-            p =  p - users[_user].lost;
+        if (p > users[_user].loss) {
+            p =  p - users[_user].loss;
         }
         return p;
     }
 
 
     function getUserPartAmount(address _user) public view returns(uint256) {
-        return users[_user].lp;
+        return users[_user].amount;
     }
 
 
@@ -137,9 +137,9 @@ contract AllocatorContract is Ownable {
 
 
     function getUser(address _user) public view returns(uint256 part, uint256 pemding, uint256 withdraw) {
-        part = users[_user].lp;
+        part = users[_user].amount;
         pemding = users[_user].pending;
-        withdraw = users[_user].lost;
+        withdraw = users[_user].loss;
     }
 
 }
