@@ -97,6 +97,7 @@ contract AllocatorContract is Ownable {
 
         if (p > users[msg.sender].loss) {
             users[msg.sender].pending = p.sub(users[msg.sender].loss);
+            paper.transfer(msg.sender, users[msg.sender].pending);
             debt = debt.add(users[msg.sender].pending);
             users[msg.sender].loss = p;
         }
