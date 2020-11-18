@@ -60,7 +60,6 @@ contract AllocatorContract is Ownable {
     mapping (address => Farmer) public users;
 
     uint256 public debt;
-    uint256 public totalLP;
 
     event Deposit(address indexed user, uint256 amount);
     event Harvest(address indexed user, uint256 amount);
@@ -72,42 +71,39 @@ contract AllocatorContract is Ownable {
     }
 
 
+
     function deposit(uint256 _amount) public {
         paperWethLP.safeTransferFrom(address(msg.sender), address(this), _amount);
-        totalLP = totalLP.add(_amount);
+
         users[msg.sender].amount = users[msg.sender].amount.add(_amount);
-        uint256 p = (users[msg.sender].amount.mul((paper.balanceOf(address(this)).add(debt)))).div(totalLP);
+        uint256 p = users[msg.sender].amount / paperWethLP.balanceOf(address(this)) * (paper.balanceOf(address(this)) + debt);
 
         if (p > users[msg.sender].loss) {
             users[msg.sender].pending = p.sub(users[msg.sender].loss);
             paper.transfer(msg.sender, users[msg.sender].pending);
-            debt = debt.add(users[msg.sender].pending);
+            debt = debt + users[msg.sender].pending;
             users[msg.sender].loss = p;
         }
-        debt = ((paper.balanceOf(address(this)).add(debt)).mul(totalLP.add(_amount))).div(totalLP).sub(paper.balanceOf(address(this)));
-        users[msg.sender].loss = (users[msg.sender].amount.mul((paper.balanceOf(address(this)).add(debt)))).div(totalLP);
+
+        debt = (paper.balanceOf(address(this)) + debt)*(paperWethLP.balanceOf(address(this)))/paperWethLP.balanceOf(address(this)) - paper.balanceOf(address(this));
+        users[msg.sender].loss = users[msg.sender].amount / paperWethLP.balanceOf(address(this)) * (paper.balanceOf(address(this)) + debt);
     }
 
 
     function harvest(uint256 _amount) public {
-        require(paper.totalSupply() < paper.maxSupply(), "Farming was stopped");
-        uint256 p = (users[msg.sender].amount.mul((paper.balanceOf(address(this)).add(debt)))).div(totalLP);
+        require(paper.totalSupply() == paper.maxSupply(), "Farming was stopped");
+
+        uint256 p = users[msg.sender].amount / paperWethLP.balanceOf(address(this)) * (paper.balanceOf(address(this)) + debt);
 
         if (p > users[msg.sender].loss) {
             users[msg.sender].pending = p.sub(users[msg.sender].loss);
-            paperWethLP.safeTransferFrom(address(this), address(msg.sender), users[msg.sender].pending);
             debt = debt.add(users[msg.sender].pending);
             users[msg.sender].loss = p;
         }
-        debt = ((paper.balanceOf(address(this)).add(debt)).mul(totalLP.sub(_amount))).div(totalLP).sub(paper.balanceOf(address(this)));
-        totalLP = totalLP.sub(_amount);
-        users[msg.sender].loss = (users[msg.sender].amount.mul((paper.balanceOf(address(this)).add(debt)))).div(totalLP);
-    }
 
-    
-    function emergencyWithdraw() public {
-        require(paper.totalSupply() == paper.maxSupply(), "This option is not available, please, continue to farming");
-        paperWethLP.safeTransferFrom(address(this), address(msg.sender), users[msg.sender].amount);
+        debt = (paper.balanceOf(address(this)) + debt)*(paperWethLP.balanceOf(address(this)) - _amount) / paperWethLP.balanceOf(address(this)) - paper.balanceOf(address(this));
+        paperWethLP.safeTransferFrom(address(this), address(msg.sender), users[msg.sender].pending);
+        users[msg.sender].loss = users[msg.sender].amount / paperWethLP.balanceOf(address(this)) * (paper.balanceOf(address(this)) + debt);
         users[msg.sender].amount = 0;
     }
 
@@ -127,7 +123,7 @@ contract AllocatorContract is Ownable {
     }
 
 
-    function getPaperEthBalance() public view returns(uint256) {
+    function getTotalLP() public view returns(uint256) {
         return paperWethLP.balanceOf(address(this));
     }
 
