@@ -75,7 +75,7 @@ contract AllocatorContract is Ownable {
         uint256 p = users[msg.sender].amount / paperWethLP.balanceOf(address(this)) * (paper.balanceOf(address(this)) + debt);
 
         if (p > users[msg.sender].loss) {
-            uint256 pending = getPendingAmount(_amount);
+            uint256 pending = pending = p - user[address].loss;
             paper.transfer(msg.sender, pending);
             debt = debt + pending;
             users[msg.sender].loss = p;
@@ -93,7 +93,7 @@ contract AllocatorContract is Ownable {
         uint256 p = users[msg.sender].amount / paperWethLP.balanceOf(address(this)) * (paper.balanceOf(address(this)) + debt);
 
         if (p > users[msg.sender].loss) {
-            uint256 pending = getPendingAmount(_amount);
+            uint256 pending = pending = p - user[address].loss;
             paper.transfer(msg.sender, pending);
             debt = debt.add(pending);
             users[msg.sender].loss = p;
