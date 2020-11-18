@@ -113,17 +113,12 @@ contract AllocatorContract is Ownable {
 
 
     function getWithdrawAmount(address _user) public view returns(uint256) {
-        return  users[_user].amount / totalLP * (paper.balanceOf(address(this)) + debt);
+        return users[_user].loss;
     }
 
 
     function getPendingAmount(address _user) public view returns(uint256) {
-        uint256 p = (users[_user].amount * (paper.balanceOf(address(this)) + debt)) / totalLP;
-
-        if (p > users[_user].loss) {
-            p =  p - users[_user].loss;
-        }
-        return p;
+        return users[_user].pending;
     }
 
 
@@ -137,9 +132,9 @@ contract AllocatorContract is Ownable {
     }
 
 
-    function getUser(address _user) public view returns(uint256 part, uint256 pemding, uint256 withdraw) {
+    function getUser(address _user) public view returns(uint256 part, uint256 pending, uint256 withdraw) {
         part = users[_user].amount;
-        pemding = users[_user].pending;
+        pending = users[_user].pending;
         withdraw = users[_user].loss;
     }
 
