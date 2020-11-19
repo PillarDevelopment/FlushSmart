@@ -24,12 +24,12 @@
 [PaperEthLPToken](https://rinkeby.etherscan.io/address/0xf6386a331c271f8951b160c4fa550d059e111582#code)
 
 
-[AllocatorContract](https://rinkeby.etherscan.io/address/0xdfea0cf794b098dd875b1940110ed3933d92c04e#code)
+[AllocatorContract](https://rinkeby.etherscan.io/address/0xD5d7F9971D1175EaF482B01036BAa3399C7f7bE5#code)
 
 
-[Lottery](https://rinkeby.etherscan.io/address/0x8df1121582f3c40d2ea0d041769b7f28d23e2731#code)
+[Lottery](https://rinkeby.etherscan.io/address/0x584c3d857078377e8b42c669dfde4d81a0918490#code)
 
 
-[Auction](https://rinkeby.etherscan.io/address/0xa43278ff648fd106dbfdf7e88994c21fa42683d8#code)
+[Auction](https://rinkeby.etherscan.io/address/0x9eb52749719fefa0ca1a2b5ac72e5d88ab224f31#code)
 
 10) для ставок необходимо заапрувить контракт Lottery/Auction  соответсвующих токенов
