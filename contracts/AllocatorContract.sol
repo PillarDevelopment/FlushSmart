@@ -43,7 +43,6 @@ library SafeERC20 {
 
 }
 
-
 contract AllocatorContract is Ownable {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
@@ -75,7 +74,7 @@ contract AllocatorContract is Ownable {
         uint256 p = users[msg.sender].amount / paperWethLP.balanceOf(address(this)) * (paper.balanceOf(address(this)) + debt);
 
         if (p > users[msg.sender].loss) {
-            uint256 pending = pending = p - user[address].loss;
+            uint256 pending = p - users[msg.sender].loss;
             paper.transfer(msg.sender, pending);
             debt = debt + pending;
             users[msg.sender].loss = p;
@@ -93,7 +92,7 @@ contract AllocatorContract is Ownable {
         uint256 p = users[msg.sender].amount / paperWethLP.balanceOf(address(this)) * (paper.balanceOf(address(this)) + debt);
 
         if (p > users[msg.sender].loss) {
-            uint256 pending = pending = p - user[address].loss;
+            uint256 pending = p - users[msg.sender].loss;
             paper.transfer(msg.sender, pending);
             debt = debt.add(pending);
             users[msg.sender].loss = p;
@@ -106,7 +105,7 @@ contract AllocatorContract is Ownable {
 
 
     function getPendingAmount(address _user) public view returns(uint256){
-        return users[_user].amount / paperWethLP.balanceOf(address(this)) * (paper.balanceOf(address(this)) + debt) - user[_user].loss;
+        return users[_user].amount / paperWethLP.balanceOf(address(this)) * (paper.balanceOf(address(this)) + debt) - users[_user].loss;
     }
 
 
@@ -125,9 +124,9 @@ contract AllocatorContract is Ownable {
     }
 
 
-    function getUser(address _user) public view returns(uint256 part, uint256 withdraw) {
+    function getUser(address _user) public view returns(uint256 part, uint256 loss) {
         part = users[_user].amount;
-        withdraw = users[_user].loss;
+        loss = users[_user].loss;
     }
 
 }

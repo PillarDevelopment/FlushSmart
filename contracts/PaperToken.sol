@@ -538,7 +538,6 @@ contract AdminContract is Ownable {
     }
 }
 
-
 contract PaperToken is ERC20("Paper", "Paper"), AdminContract {
 
     uint256 private maxSupplyPaper = 69000*1e18;
