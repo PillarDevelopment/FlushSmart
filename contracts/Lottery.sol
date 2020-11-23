@@ -8,31 +8,25 @@ contract Lottery is RoundManager, Random {
 
     address public immutable WETH;
 
-    Bet[] public bets;
-    mapping(address => uint256) public betsHistory;
-
-
-    constructor (address _router, address _developers, address _WETH, PaperToken _paper, address _allocatorContract) public {
-        router = _router; // 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D
-        developers = _developers; // 0x2fd852c9a9aBb66788F96955E9928aEF3D71aE98
-        WETH = _WETH; // 0xc778417e063141139fce010982780140aa0cd5ab  DAI 0xc7ad46e0b8a400bb3c915120d284aafba8fc4735
-        paper = _paper; // 0x2cbef5b1356456a2830dfef6393daca2b3dfb7a5
-        allocatorContract = _allocatorContract;
+    constructor (address _router, address _developers, address _WETH, PaperToken _paper, address _farmContract) public {
+        router = _router;
+        developers = _developers;
+        WETH = _WETH;
+        paper = _paper;
+        farmContract = _farmContract;
     }
-
 
     receive() external payable {
         assert(msg.sender == WETH); // only accept ETH via fallback from the WETH contract
     }
 
-
     function makeBet(uint256 _tokenId, uint256 _tokenAmount) public {
         transferTokens(_tokenId, _tokenAmount);
         uint256 _swapWeTH = swap(_tokenAmount,
-                                availableTokens[_tokenId],
-                                WETH,
-                                getAmountTokens(availableTokens[_tokenId], WETH, _tokenAmount),
-                                address(this));
+            availableTokens[_tokenId],
+            WETH,
+            getAmountTokens(availableTokens[_tokenId], WETH, _tokenAmount),
+            address(this));
         mintToken(msg.sender);
 
         uint256 betAmount = _swapWeTH;
@@ -42,42 +36,39 @@ contract Lottery is RoundManager, Random {
 
         roundBalance = roundBalance.add(_swapWeTH);
         accumulatedBalance = accumulatedBalance.add(_swapWeTH);
-        addNewRate(msg.sender, betAmount);
+        addNewBet(msg.sender, betAmount);
 
         if(roundBalance >= roundLimit) {
             givePrize();
         }
     }
 
-
-    function addNewRate(address _player, uint256 _rateEth) internal {
-
-        lastRates[_player].rate = _rateEth;
-        lastRates[_player].round = getCountOfRewards();
+    function addNewBet(address _player, uint256 _rateEth) internal {
         betsHistory[msg.sender] = bets.length;
         bets.push(Bet({ player: _player,
-                        bet: _rateEth}));
+        bet: _rateEth}));
         emit NewBet(msg.sender, _rateEth);
     }
 
-
     function givePrize() internal {
-        uint256 prizeNumber = _randRange(0, roundLimit);
+        uint256 prizeNumber = _randRange(1, roundLimit);
         address payable winner = payable(generateWinner(prizeNumber));
 
         uint256 userReward = allocatePaper();
 
+        finishedRounds++;
         IWETH(WETH).withdraw(userReward);
-        msg.sender.transfer(userReward);
+        winner.transfer(userReward);
 
-        finishedRounds.push(Round({winner: winner, prize: userReward}));
-        clearRound();
+        // Clear round
+        delete bets;
+        roundBalance = 0;
+
         emit EndRound(winner, prizeNumber);
         emit NewRound(roundLimit, paperReward);
     }
 
-
-    function generateWinner(uint256 prizeNumber) internal view returns(address winner) {
+    function generateWinner(uint256 prizeNumber) public view returns(address winner) {
         uint256 a = 0;
         for(uint256 i=0; i<bets.length; i++) {
             if (prizeNumber > a && prizeNumber <= a.add(bets[i].bet)) {
@@ -88,41 +79,24 @@ contract Lottery is RoundManager, Random {
         }
     }
 
-
-    function clearRound() internal {
-        for(uint256 i = 0; i < bets.length; i++) {
-            betsHistory[bets[i].player] = 0;
-        }
-        delete bets;
-        roundBalance = 0;
-    }
-
-
     function allocatePaper() internal returns(uint256) {
-        uint256 amountToBurn = getAmountForRansom(roundBalance, burnedPart);
-        uint256 amountToAllocation = getAmountForRansom(roundBalance, allocationPart);
+        uint256 amountToBurn = getAmountForRedeem(roundBalance, burnedPart);
+        uint256 amountToFarm = getAmountForRedeem(roundBalance, farmPart);
 
-        uint256 maxReturn = getAmountTokens(WETH, address(paper), amountToBurn.add(amountToAllocation));
+        uint256 maxReturn = getAmountTokens(WETH, address(paper), amountToBurn.add(amountToFarm));
 
-        if (maxReturn < amountToBurn.add(amountToAllocation)) {
-            amountToBurn = amountToBurn.mul(maxReturn.div(amountToBurn.add(amountToAllocation)));              // todo посчитать пропорции в получившемся числе
-            amountToAllocation = amountToAllocation.mul(maxReturn.div(amountToBurn.add(amountToAllocation)));
+        if (maxReturn < amountToBurn.add(amountToFarm)) {
+            uint256 share = maxReturn.div(amountToBurn.add(amountToFarm));
+            amountToBurn = amountToBurn.mul(share);
+            amountToFarm = amountToFarm.mul(share);
         }
         swap(amountToBurn, WETH, address(paper), getAmountTokens(WETH, address(paper), amountToBurn), 0x0000000000000000000000000000000000000005);
-        swap(amountToAllocation, WETH, address(paper), getAmountTokens(WETH, address(paper), amountToAllocation), allocatorContract);
-        uint256 userReward = roundBalance.sub(amountToBurn.add(amountToAllocation));
+        swap(amountToFarm, WETH, address(paper), getAmountTokens(WETH, address(paper), amountToFarm), farmContract);
+        uint256 userReward = roundBalance.sub(amountToBurn.add(amountToFarm));
         return userReward;
     }
 
-
-    function getRateUserInfo(uint256 _userid) public view returns(address player, uint256 rate) {
-        player = bets[_userid].player;
-        rate = bets[_userid].bet;
-    }
-
-
-    function getBetsLength() public view returns(uint256) {
+    function betsLength() public view returns(uint256) {
         return bets.length;
     }
-
 }
