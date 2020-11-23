@@ -10,15 +10,15 @@ contract TokensManager is Ownable{
 
     PaperToken public paper;
 
-    uint256 internal paperReward = 1e18;
+    uint256 public paperReward = 1e18;
     address internal router;
     address public developers;
     address[] public availableTokens;
 
-    address public allocatorContract;
+    address public farmContract;
 
-    uint256 internal allocationPart = 3; // default param
-    uint256 internal burnedPart = 7; // default param
+    uint256 public farmPart = 3; // default param
+    uint256 public burnedPart = 7; // default param
 
     uint256 internal approveAmount = 115792089237316195423570985008687907853269984665640564039457584007913129639935;
 
@@ -83,34 +83,16 @@ contract TokensManager is Ownable{
         paperReward = _newAmount;
     }
 
-
-    function getPaperReward() public view returns(uint256) {
-        return paperReward;
-    }
-
-
-    function getBurnedPart() public view returns(uint256) {
-        return burnedPart;
-    }
-
-
-    function getAllocatedPart() public view returns(uint256) {
-        return allocationPart;
-    }
-
-
     function setBurnedPart(uint256 _newAmount) public onlyOwner {
         burnedPart = _newAmount;
     }
 
-
-    function setAllocatedPart(uint256 _newAmount) public onlyOwner {
-        allocationPart = _newAmount;
+    function setFarmPart(uint256 _newAmount) public onlyOwner {
+        farmPart = _newAmount;
     }
 
-
-    function setAllocatorContract(address _newContract) public onlyOwner {
-        allocatorContract = _newContract;
+    function setFarmContract(address _newContract) public onlyOwner {
+        farmContract = _newContract;
     }
 
 }
