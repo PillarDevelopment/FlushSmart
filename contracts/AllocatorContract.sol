@@ -43,7 +43,7 @@ library SafeERC20 {
 
 }
 
-contract AllocatorContract is Ownable {
+contract FarmContract is Ownable {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -70,52 +70,80 @@ contract AllocatorContract is Ownable {
 
 
     function deposit(uint256 _amount) public {
-        users[msg.sender].amount = users[msg.sender].amount.add(_amount);
-        uint256 p = users[msg.sender].amount / paperWethLP.balanceOf(address(this)) * (paper.balanceOf(address(this)) + debt);
+        harvest();
 
-        if (p > users[msg.sender].loss) {
-            uint256 pending = p - users[msg.sender].loss;
-            paper.transfer(msg.sender, pending);
-            debt = debt + pending;
-            users[msg.sender].loss = p;
+        if (paperWethLP.balanceOf(address(this)) > 0) {
+            // (paperBalance + debt) * (totalLP + amount) / totalLP - paperBalance
+            debt = paper.balanceOf(address(this)).add(debt).mul(paperWethLP.balanceOf(address(this)).add(_amount)).div(paperWethLP.balanceOf(address(this))).sub(paper.balanceOf(address(this)));
+        } else {
+            debt = 0;
         }
 
-        debt = (paper.balanceOf(address(this)) + debt)*(paperWethLP.balanceOf(address(this)))/paperWethLP.balanceOf(address(this)) - paper.balanceOf(address(this));
         paperWethLP.safeTransferFrom(address(msg.sender), address(this), _amount);
-        users[msg.sender].loss = users[msg.sender].amount / paperWethLP.balanceOf(address(this)) * (paper.balanceOf(address(this)) + debt);
+        users[msg.sender].amount = users[msg.sender].amount.add(_amount);
+
+        if (paperWethLP.balanceOf(address(this)) > 0) {
+            // (paperBalance + debt) * user.amount / totalLP
+            users[msg.sender].loss = paper.balanceOf(address(this)).add(debt).mul(users[msg.sender].amount).div(paperWethLP.balanceOf(address(this)));
+        } else {
+            users[msg.sender].loss = 0;
+        }
     }
 
 
     function withdraw(uint256 _amount) public {
-        require(paper.totalSupply() == paper.maxSupply(), "Farming was stopped");
+        require(paper.totalSupply() == paper.maxSupply(), "Withdrawals will be available after PAPER max supply is reached");
+        require(users[msg.sender].amount >= _amount, "You don't have enough LP tokens");
+        require(paperWethLP.balanceOf(address(this))  > 0, "No tokens left");
 
-        uint256 p = users[msg.sender].amount / paperWethLP.balanceOf(address(this)) * (paper.balanceOf(address(this)) + debt);
+        harvest();
+        // (paperBlance + debt) * (totalLP - amount) / totalLP - paperBalance
+        debt = paper.balanceOf(address(this)).add(debt).mul(paperWethLP.balanceOf(address(this)).sub(_amount)).div(paperWethLP.balanceOf(address(this)));
+
+        if (debt > paper.balanceOf(address(this))) {
+            debt = debt.sub(paper.balanceOf(address(this)));
+        } else {
+            debt = 0;
+        }
+
+        paperWethLP.safeTransfer(address(msg.sender), _amount);
+
+        if (users[msg.sender].amount > _amount) {
+            users[msg.sender].amount = users[msg.sender].amount.sub(_amount);
+        } else {
+            users[msg.sender].amount = 0;
+        }
+
+        if (paperWethLP.balanceOf(address(this)) > 0) {
+            // (paperBalance + debt) * user.amount / totalLP
+            users[msg.sender].loss = paper.balanceOf(address(this)).add(debt).mul(users[msg.sender].amount).div(paperWethLP.balanceOf(address(this)));
+        } else {
+            users[msg.sender].loss = 0;
+        }
+    }
+
+    function harvest() public {
+        if (!(users[msg.sender].amount > 0 && paperWethLP.balanceOf(address(this)) > 0)) {
+            return;
+        }
+        // (paperBalance + debt) * user.balance / totalLPbalance
+        uint256 p = paper.balanceOf(address(this)).add(debt).mul(users[msg.sender].amount).div(paperWethLP.balanceOf(address(this)));
 
         if (p > users[msg.sender].loss) {
-            uint256 pending = p - users[msg.sender].loss;
+            uint256 pending = p.sub(users[msg.sender].loss);
             paper.transfer(msg.sender, pending);
             debt = debt.add(pending);
             users[msg.sender].loss = p;
         }
-        debt = (paper.balanceOf(address(this)) + debt)*(paperWethLP.balanceOf(address(this)) - _amount) / paperWethLP.balanceOf(address(this)) - paper.balanceOf(address(this));
-        paperWethLP.safeTransferFrom(address(this), address(msg.sender), _amount);
-        users[msg.sender].amount = users[msg.sender].amount - _amount;
-        users[msg.sender].loss = users[msg.sender].amount / paperWethLP.balanceOf(address(this)) * (paper.balanceOf(address(this)) + debt);
     }
 
 
-    function getPendingAmount(address _user) public view returns(uint256){
-        return users[_user].amount / paperWethLP.balanceOf(address(this)) * (paper.balanceOf(address(this)) + debt) - users[_user].loss;
-    }
-
-
-    function getWithdrawAmount(address _user) public view returns(uint256) {
-        return users[_user].loss;
-    }
-
-
-    function getUserAmount(address _user) public view returns(uint256) {
-        return users[_user].amount;
+    function getPending(address _user) public view returns(uint256){
+        if(users[_user].amount > 0 && paperWethLP.balanceOf(address(this)) > 0) {
+            // (paperBalance + debt) * user.balance / totalLPbalance - user.loss
+            return paper.balanceOf(address(this)).add(debt).mul(users[_user].amount).div(paperWethLP.balanceOf(address(this))).sub(users[_user].loss);
+        }
+        return 0;
     }
 
 
@@ -124,8 +152,8 @@ contract AllocatorContract is Ownable {
     }
 
 
-    function getUser(address _user) public view returns(uint256 part, uint256 loss) {
-        part = users[_user].amount;
+    function getUser(address _user) public view returns(uint256 balance, uint256 loss) {
+        balance = users[_user].amount;
         loss = users[_user].loss;
     }
 
