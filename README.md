@@ -1,5 +1,7 @@
 # FlushSmart
 
+[EtherScan Tracker](https://etherscan.io/token/0xddce093888c8dc636677cd29bc6c68d35cfdac33)
+
 1) Деплой PaperToken.sol
 
 2) Создание пары PaperETH на юнисвап
