@@ -3,10 +3,15 @@
 [PaperToken EtherScan Tracker](https://etherscan.io/token/0xddce093888c8dc636677cd29bc6c68d35cfdac33)
 [Official WebSite](https://flush.lol/)
 
+
 [Lottery](https://etherscan.io/address/0x02989255145401d489135ee9e4d9af993466aa96#code)
+
 [Auction](https://etherscan.io/address/0x8642537a0798f572bc42ed510d77651c3919489a#code)
+
 [Stacking](https://etherscan.io/address/0x078cf5973ae111d2c58ffb4662114d36f0092019#code)
+
 [About](https://medium.com/@flushlol/just-flush-it-flush-lol-is-now-live-ffbc3670f270)
+
 
 1) Деплой PaperToken.sol
 
